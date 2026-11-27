@@ -29,15 +29,16 @@
     /* ============ OVLÁDACÍ PANEL (skrytý při tisku do PDF) ============ */
     .app-shell {
       display: grid;
-      grid-template-columns: 360px 1fr;
+      grid-template-columns: 390px 1fr;
       min-height: 100vh;
     }
 
     .sidebar {
       background: var(--ui-card);
       border-right: 1px solid var(--ui-border);
-      padding: 18px 20px;
+      padding: 18px 20px 28px;
       overflow-y: auto;
+      max-height: 100vh;
     }
 
     .sidebar h1 {
@@ -54,23 +55,25 @@
 
     .btn-row {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
 
-    button, .file-btn {
+    button, .file-btn, a.link-btn {
       cursor: pointer;
       border: 1px solid #D1D5DB;
       background: #FFFFFF;
       color: #111827;
-      padding: 8px 12px;
+      padding: 7px 10px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
+      text-decoration: none;
+      font-family: inherit;
     }
 
     button.primary {
@@ -79,9 +82,34 @@
       border-color: var(--color-navy);
     }
 
+    button.accent {
+      background: #FEF3C7;
+      color: #78350F;
+      border-color: #F59E0B;
+    }
+
+    button.accent:hover { background: #FDE68A; }
+
+    button.danger {
+      color: #991B1B;
+      border-color: #FECACA;
+      background: #FEF2F2;
+    }
+
+    button.danger:hover { background: #FEE2E2; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:hover:not(:disabled), .file-btn:hover, a.link-btn:hover { background: #F9FAFB; }
     button.primary:hover { background: #1E285A; }
-    button:hover, .file-btn:hover { background: #F9FAFB; }
-    button.primary:hover { background: #1E285A; }
+
+    .status-bar {
+      font-size: 12px;
+      min-height: 18px;
+      margin: 4px 0 10px;
+      color: #047857;
+      font-weight: 600;
+    }
+
+    .status-bar.warn { color: #B45309; }
 
     .section-title {
       font-size: 11px;
@@ -106,7 +134,7 @@
       margin-bottom: 3px;
     }
 
-    .field input, .field select {
+    .field input, .field select, .field textarea {
       width: 100%;
       padding: 6px 8px;
       border: 1px solid #D1D5DB;
@@ -115,11 +143,51 @@
       font-family: inherit;
     }
 
+    .field textarea {
+      resize: vertical;
+      min-height: 48px;
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
+
+    .qr-meta-box {
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11.5px;
+      color: #374151;
+      margin-top: 6px;
+    }
+
+    .qr-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .qr-preview-text {
+      margin: 6px 0 0;
+      padding: 6px 8px;
+      background: #FFFFFF;
+      border: 1px solid #E5E7EB;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 110px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: #1F2937;
+    }
+
+    .hidden { display: none !important; }
 
     .preview-stage {
       display: flex;
@@ -365,12 +433,23 @@
           📂 Načíst CSV
           <input type="file" id="csvUpload" accept=".csv,text/csv" style="display:none" />
         </label>
+        <button type="button" id="btnExportCsv" title="Stáhnout všechny uložené šablony vín jako CSV">📥 Export CSV</button>
       </div>
 
+      <div class="section-title" style="margin-top:6px;">Šablony vín (uloženo v prohlížeči)</div>
+
       <div class="field">
-        <label for="varietySelect">Vybrat odrůdu z tabulky</label>
+        <label for="varietySelect">Vybrat uložené víno</label>
         <select id="varietySelect"></select>
       </div>
+
+      <div class="btn-row">
+        <button type="button" class="accent" id="btnSaveWine" title="Uložit úpravy do vybraného vína">💾 Uložit změny</button>
+        <button type="button" id="btnSaveAsNew" title="Vytvořit novou šablonu z aktuálních údajů">➕ Uložit jako nové</button>
+        <button type="button" class="danger" id="btnDeleteWine" title="Smazat vybranou šablonu">🗑️ Smazat</button>
+        <button type="button" id="btnResetDefaults" title="Obnovit výchozí seznam vín">↺</button>
+      </div>
+      <div class="status-bar" id="saveStatus"></div>
 
       <div class="grid-2">
         <div class="field">
@@ -392,51 +471,118 @@
 
       <div class="section-title">Údaje na etiketě</div>
 
+      <div class="grid-2">
+        <div class="field">
+          <label for="f_kod">Kód šablony</label>
+          <input id="f_kod" type="text" placeholder="01_RB_2026" />
+        </div>
+        <div class="field">
+          <label for="f_rocnik">Ročník</label>
+          <input id="f_rocnik" type="text" />
+        </div>
+      </div>
       <div class="field">
-        <label>Název odrůdy</label>
+        <label for="f_nazev">Název odrůdy</label>
         <input id="f_nazev" type="text" />
       </div>
       <div class="field">
-        <label>Zatřídění a cukr (přední strana)</label>
+        <label for="f_zatrid_cukr">Zatřídění a cukr (přední strana)</label>
         <input id="f_zatrid_cukr" type="text" />
       </div>
       <div class="grid-2">
         <div class="field">
-          <label>Zatřídění (zadní)</label>
+          <label for="f_zatrid_kratke">Zatřídění (zadní)</label>
           <input id="f_zatrid_kratke" type="text" />
         </div>
         <div class="field">
-          <label>Ročník</label>
-          <input id="f_rocnik" type="text" />
+          <label for="f_trat">Viniční trať</label>
+          <input id="f_trat" type="text" />
         </div>
       </div>
       <div class="grid-2">
         <div class="field">
-          <label>Viniční trať</label>
-          <input id="f_trat" type="text" />
+          <label for="f_sarze">Číslo šarže (č.š.)</label>
+          <input id="f_sarze" type="text" />
         </div>
         <div class="field">
-          <label>Číslo šarže (č.š.)</label>
-          <input id="f_sarze" type="text" />
+          <label for="f_obsahuje">Alergeny (na etiketě)</label>
+          <input id="f_obsahuje" type="text" />
         </div>
       </div>
       <div class="field">
-        <label>Energetická hodnota</label>
+        <label for="f_energie">Energetická hodnota</label>
         <input id="f_energie" type="text" />
       </div>
       <div class="grid-2">
         <div class="field">
-          <label>Alkohol</label>
+          <label for="f_alkohol">Alkohol</label>
           <input id="f_alkohol" type="text" />
         </div>
         <div class="field">
-          <label>Objem</label>
+          <label for="f_objem">Objem</label>
           <input id="f_objem" type="text" />
         </div>
       </div>
+
+      <div class="section-title">Obsah QR kódu (složení a výživové údaje)</div>
+
       <div class="field">
-        <label>URL e-etikety (pro vektorový QR kód)</label>
-        <input id="f_url" type="url" />
+        <label for="f_qr_rezim">Co se uloží do QR kódu</label>
+        <select id="f_qr_rezim">
+          <option value="elabel">E-etiketa s hodnotami (webová stránka)</option>
+          <option value="text">Přímý text hodnot v QR kódu (offline)</option>
+          <option value="url">Vlastní URL adresa</option>
+        </select>
+      </div>
+
+      <div id="nutritionFields">
+        <div class="field">
+          <label for="f_slozeni">Složení</label>
+          <textarea id="f_slozeni" rows="2" placeholder="hrozny, konzervanty a antioxidanty (oxid siřičitý)"></textarea>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f_tuky">Tuky (na 100 ml)</label>
+            <input id="f_tuky" type="text" placeholder="0 g" />
+          </div>
+          <div class="field">
+            <label for="f_nasycene">z toho nasycené</label>
+            <input id="f_nasycene" type="text" placeholder="0 g" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f_sacharidy">Sacharidy (na 100 ml)</label>
+            <input id="f_sacharidy" type="text" placeholder="1,5 g" />
+          </div>
+          <div class="field">
+            <label for="f_cukry">z toho cukry</label>
+            <input id="f_cukry" type="text" placeholder="0,9 g" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f_bilkoviny">Bílkoviny (na 100 ml)</label>
+            <input id="f_bilkoviny" type="text" placeholder="0 g" />
+          </div>
+          <div class="field">
+            <label for="f_sul">Sůl (na 100 ml)</label>
+            <input id="f_sul" type="text" placeholder="0 g" />
+          </div>
+        </div>
+      </div>
+
+      <div class="field hidden" id="customUrlField">
+        <label for="f_url">Vlastní URL e-etikety</label>
+        <input id="f_url" type="url" placeholder="https://..." />
+      </div>
+
+      <div class="qr-meta-box">
+        <div class="qr-meta-row">
+          <span id="qrInfoLabel">QR kód připraven</span>
+          <a id="qrOpenLink" class="link-btn" href="#" target="_blank" rel="noopener">🔍 Otevřít e-etiketu</a>
+        </div>
+        <pre id="qrPreviewText" class="qr-preview-text hidden"></pre>
       </div>
     </aside>
 
@@ -519,7 +665,7 @@
                     </div>
                   </div>
                   <div class="back-sulfites-lot">
-                    Obsahuje oxid siřičitý • č.š.: <span id="out_sarze"></span>
+                    <span id="out_obsahuje">Obsahuje oxid siřičitý</span> • č.š.: <span id="out_sarze"></span>
                   </div>
                 </div>
 
@@ -539,34 +685,157 @@
 
   <script src="scripts/qr_svg.js"></script>
   <script>
+    const STORAGE_KEY = 'salajka_etikety_templates_v1';
+    const DEFAULT_INGREDIENTS = 'hrozny, konzervanty a antioxidanty (oxid siřičitý)';
+    const DEFAULT_ALLERGENS = 'Obsahuje oxid siřičitý';
+    const CSV_COLUMNS = [
+      'kod', 'odrudy_nazev', 'zatrid_cukr', 'zatrid_kratke', 'rocnik',
+      'vinicni_trat', 'cislo_sarze', 'energeticka_hodnota', 'alkohol', 'objem',
+      'obsahuje', 'url_e_etiketa', 'slozeni', 'tuky', 'nasycene',
+      'sacharidy', 'cukry', 'bilkoviny', 'sul', 'qr_rezim'
+    ];
+
     const DEFAULT_ROWS = [
       {
         kod: '01_RB_2026', odrudy_nazev: 'Rulandské bílé',
         zatrid_cukr: 'Moravské zemské víno • polosuché', zatrid_kratke: 'Moravské zemské víno',
         rocnik: '2026', vinicni_trat: 'Staré hory', cislo_sarze: '2611',
         energeticka_hodnota: '328 kJ / 78 kcal ve 100ml', alkohol: '12,5 % obj.', objem: '0,75 l',
-        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rb-2611'
+        obsahuje: DEFAULT_ALLERGENS,
+        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rb-2611',
+        slozeni: DEFAULT_INGREDIENTS,
+        tuky: '0 g', nasycene: '0 g', sacharidy: '1,5 g', cukry: '0,9 g', bilkoviny: '0 g', sul: '0 g',
+        qr_rezim: 'elabel'
       },
       {
         kod: '02_RV_2026', odrudy_nazev: 'Ryzlink vlašský',
         zatrid_cukr: 'Moravské zemské víno • suché', zatrid_kratke: 'Moravské zemské víno',
         rocnik: '2026', vinicni_trat: 'Pod předníma', cislo_sarze: '2614',
         energeticka_hodnota: '305 kJ / 73 kcal ve 100ml', alkohol: '12,0 % obj.', objem: '0,75 l',
-        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rv-2614'
+        obsahuje: DEFAULT_ALLERGENS,
+        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rv-2614',
+        slozeni: DEFAULT_INGREDIENTS,
+        tuky: '0 g', nasycene: '0 g', sacharidy: '0,8 g', cukry: '0,3 g', bilkoviny: '0 g', sul: '0 g',
+        qr_rezim: 'elabel'
       },
       {
         kod: '03_CM_2025', odrudy_nazev: 'Cabernet Moravia',
         zatrid_cukr: 'Moravské zemské víno • suché', zatrid_kratke: 'Moravské zemské víno',
         rocnik: '2025', vinicni_trat: 'Stará hora', cislo_sarze: '2508',
         energeticka_hodnota: '330 kJ / 79 kcal ve 100ml', alkohol: '13,5 % obj.', objem: '0,75 l',
-        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2025/cm-2508'
+        obsahuje: DEFAULT_ALLERGENS,
+        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2025/cm-2508',
+        slozeni: DEFAULT_INGREDIENTS,
+        tuky: '0 g', nasycene: '0 g', sacharidy: '0,6 g', cukry: '0,2 g', bilkoviny: '0 g', sul: '0 g',
+        qr_rezim: 'elabel'
       }
     ];
 
-    let rows = [...DEFAULT_ROWS];
-    let currentCode = rows[0].kod;
+    let defaultRows = DEFAULT_ROWS.map(normalizeRow);
+    let rows = [...defaultRows];
+    let currentIndex = 0;
+    let statusTimer = null;
 
     const $ = (id) => document.getElementById(id);
+
+    function normalizeRow(raw) {
+      const r = raw || {};
+      return {
+        kod: (r.kod || 'ETIKETA').trim(),
+        odrudy_nazev: (r.odrudy_nazev || '').trim(),
+        zatrid_cukr: (r.zatrid_cukr || '').trim(),
+        zatrid_kratke: (r.zatrid_kratke || '').trim(),
+        rocnik: (r.rocnik || '').trim(),
+        vinicni_trat: (r.vinicni_trat || '').trim(),
+        cislo_sarze: (r.cislo_sarze || '').trim(),
+        energeticka_hodnota: (r.energeticka_hodnota || '').trim(),
+        alkohol: (r.alkohol || '').trim(),
+        objem: (r.objem || '0,75 l').trim(),
+        obsahuje: (r.obsahuje || DEFAULT_ALLERGENS).trim(),
+        url_e_etiketa: (r.url_e_etiketa || '').trim(),
+        slozeni: (r.slozeni || DEFAULT_INGREDIENTS).trim(),
+        tuky: (r.tuky || '0 g').trim(),
+        nasycene: (r.nasycene || '0 g').trim(),
+        sacharidy: (r.sacharidy || '').trim(),
+        cukry: (r.cukry || '').trim(),
+        bilkoviny: (r.bilkoviny || '0 g').trim(),
+        sul: (r.sul || '0 g').trim(),
+        qr_rezim: ['elabel', 'text', 'url'].includes(r.qr_rezim) ? r.qr_rezim : 'elabel'
+      };
+    }
+
+    function readFormData() {
+      return normalizeRow({
+        kod: $('f_kod').value,
+        odrudy_nazev: $('f_nazev').value,
+        zatrid_cukr: $('f_zatrid_cukr').value,
+        zatrid_kratke: $('f_zatrid_kratke').value,
+        rocnik: $('f_rocnik').value,
+        vinicni_trat: $('f_trat').value,
+        cislo_sarze: $('f_sarze').value,
+        energeticka_hodnota: $('f_energie').value,
+        alkohol: $('f_alkohol').value,
+        objem: $('f_objem').value,
+        obsahuje: $('f_obsahuje').value,
+        url_e_etiketa: $('f_url').value,
+        slozeni: $('f_slozeni').value,
+        tuky: $('f_tuky').value,
+        nasycene: $('f_nasycene').value,
+        sacharidy: $('f_sacharidy').value,
+        cukry: $('f_cukry').value,
+        bilkoviny: $('f_bilkoviny').value,
+        sul: $('f_sul').value,
+        qr_rezim: $('f_qr_rezim').value
+      });
+    }
+
+    function persistRows() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+      } catch (e) {}
+    }
+
+    function loadPersistedRows() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) {
+          return parsed.map(normalizeRow);
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function showStatus(msg, isWarn = false, autoClearMs = 3500) {
+      const el = $('saveStatus');
+      el.textContent = msg;
+      el.classList.toggle('warn', isWarn);
+      if (statusTimer) clearTimeout(statusTimer);
+      if (autoClearMs > 0) {
+        statusTimer = setTimeout(() => { el.textContent = ''; }, autoClearMs);
+      }
+    }
+
+    function generateUniqueCode(name, year, existingRows) {
+      const ascii = (name || 'VINO')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase();
+      const words = ascii.split(/[^A-Z0-9]+/).filter(Boolean);
+      const abbr = words.length >= 2
+        ? (words[0][0] + words[1][0])
+        : (words[0] ? words[0].slice(0, 2) : 'VN');
+      const num = String(existingRows.length + 1).padStart(2, '0');
+      const yr = (year || new Date().getFullYear()).toString().replace(/[^0-9]/g, '') || '2026';
+      let base = `${num}_${abbr}_${yr}`;
+      const used = new Set(existingRows.map((r) => r.kod));
+      let candidate = base;
+      let suffix = 2;
+      while (used.has(candidate)) {
+        candidate = `${base}_${suffix++}`;
+      }
+      return candidate;
+    }
 
     async function loadSvgs() {
       try {
@@ -587,24 +856,80 @@
       rows.forEach((r, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
-        opt.textContent = `${r.kod} — ${r.odrudy_nazev} (${r.rocnik})`;
+        opt.textContent = `${r.kod} — ${r.odrudy_nazev || 'Bez názvu'} (${r.rocnik || '—'})`;
         sel.appendChild(opt);
       });
+      sel.value = String(currentIndex);
+      $('btnDeleteWine').disabled = rows.length <= 1;
     }
 
-    function loadRowIntoForm(row) {
-      currentCode = row.kod || 'ETIKETA';
-      $('f_nazev').value = row.odrudy_nazev || '';
-      $('f_zatrid_cukr').value = row.zatrid_cukr || '';
-      $('f_zatrid_kratke').value = row.zatrid_kratke || '';
-      $('f_rocnik').value = row.rocnik || '';
-      $('f_trat').value = row.vinicni_trat || '';
-      $('f_sarze').value = row.cislo_sarze || '';
-      $('f_energie').value = row.energeticka_hodnota || '';
-      $('f_alkohol').value = row.alkohol || '';
-      $('f_objem').value = row.objem || '0,75 l';
-      $('f_url').value = row.url_e_etiketa || '';
+    function loadRowIntoForm(index) {
+      currentIndex = Math.max(0, Math.min(index, rows.length - 1));
+      const row = rows[currentIndex];
+      $('varietySelect').value = String(currentIndex);
+      $('f_kod').value = row.kod;
+      $('f_nazev').value = row.odrudy_nazev;
+      $('f_zatrid_cukr').value = row.zatrid_cukr;
+      $('f_zatrid_kratke').value = row.zatrid_kratke;
+      $('f_rocnik').value = row.rocnik;
+      $('f_trat').value = row.vinicni_trat;
+      $('f_sarze').value = row.cislo_sarze;
+      $('f_energie').value = row.energeticka_hodnota;
+      $('f_alkohol').value = row.alkohol;
+      $('f_objem').value = row.objem;
+      $('f_obsahuje').value = row.obsahuje;
+      $('f_url').value = row.url_e_etiketa;
+      $('f_slozeni').value = row.slozeni;
+      $('f_tuky').value = row.tuky;
+      $('f_nasycene').value = row.nasycene;
+      $('f_sacharidy').value = row.sacharidy;
+      $('f_cukry').value = row.cukry;
+      $('f_bilkoviny').value = row.bilkoviny;
+      $('f_sul').value = row.sul;
+      $('f_qr_rezim').value = row.qr_rezim;
+      $('saveStatus').textContent = '';
       renderPreview();
+    }
+
+    function getElabelBaseUrl() {
+      if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+        return new URL('e.html', window.location.href).href;
+      }
+      return 'https://lada008.github.io/etikety/e.html';
+    }
+
+    function buildElabelUrl(d) {
+      const p = new URLSearchParams();
+      if (d.odrudy_nazev) p.set('n', d.odrudy_nazev);
+      if (d.rocnik) p.set('r', d.rocnik);
+      if (d.zatrid_cukr) p.set('z', d.zatrid_cukr);
+      if (d.vinicni_trat) p.set('t', d.vinicni_trat);
+      if (d.cislo_sarze) p.set('s', d.cislo_sarze);
+      const cleanEnergy = d.energeticka_hodnota.replace(/\s*ve\s*100\s*ml/i, '').trim();
+      if (cleanEnergy) p.set('e', cleanEnergy);
+      if (d.alkohol) p.set('a', d.alkohol);
+      if (d.objem) p.set('o', d.objem);
+      if (d.slozeni && d.slozeni !== DEFAULT_INGREDIENTS) p.set('sl', d.slozeni);
+      if (d.obsahuje && d.obsahuje !== DEFAULT_ALLERGENS) p.set('al', d.obsahuje);
+      if (d.tuky && d.tuky !== '0 g') p.set('tu', d.tuky);
+      if (d.nasycene && d.nasycene !== '0 g') p.set('nm', d.nasycene);
+      if (d.sacharidy) p.set('sa', d.sacharidy);
+      if (d.cukry) p.set('cu', d.cukry);
+      if (d.bilkoviny && d.bilkoviny !== '0 g') p.set('bi', d.bilkoviny);
+      if (d.sul && d.sul !== '0 g') p.set('su', d.sul);
+      return `${getElabelBaseUrl()}?${p.toString()}`;
+    }
+
+    function buildQrPlainText(d) {
+      const cleanEnergy = d.energeticka_hodnota.replace(/\s*ve\s*100\s*ml/i, '').trim();
+      const lines = [
+        `${d.odrudy_nazev}${d.rocnik ? ' ' + d.rocnik : ''}${d.cislo_sarze ? ' (č.š. ' + d.cislo_sarze + ')' : ''}`,
+        d.slozeni ? `Složení: ${d.slozeni}` : '',
+        d.obsahuje || '',
+        `Na 100 ml: ${cleanEnergy || '—'}, tuky ${d.tuky || '0 g'} (nas. ${d.nasycene || '0 g'}), sacharidy ${d.sacharidy || '—'} (cukry ${d.cukry || '—'}), bílkoviny ${d.bilkoviny || '0 g'}, sůl ${d.sul || '0 g'}`,
+        [d.alkohol ? `Alk.: ${d.alkohol}` : '', d.objem || ''].filter(Boolean).join(' | ')
+      ];
+      return lines.filter(Boolean).join('\n');
     }
 
     function renderPreview() {
@@ -614,36 +939,65 @@
       sheet.setAttribute('data-mode', mode);
       sheet.setAttribute('data-shadow', shadow);
 
-      const nazev = $('f_nazev').value;
-      const rocnik = $('f_rocnik').value;
-      const sarze = $('f_sarze').value;
-      const alk = $('f_alkohol').value.trim();
-      const m = alk.match(/^([0-9]+(?:[,\.][0-9]+)?\s*%)\s*(.*)$/);
+      const d = readFormData();
+      const m = d.alkohol.match(/^([0-9]+(?:[,\.][0-9]+)?\s*%)\s*(.*)$/);
 
-      $('out_front_nazev').textContent = nazev;
-      $('out_back_nazev').textContent = nazev;
-      $('out_front_zatrid').textContent = $('f_zatrid_cukr').value;
-      $('out_back_zatrid').textContent = $('f_zatrid_kratke').value;
-      $('out_front_rocnik').textContent = rocnik;
-      $('out_back_rocnik').textContent = rocnik;
-      $('out_trat').textContent = $('f_trat').value;
-      $('out_energie').textContent = $('f_energie').value;
-      $('out_sarze').textContent = sarze;
-      $('out_objem').textContent = $('f_objem').value;
-      $('out_alc_num').textContent = m ? m[1] : alk;
+      $('out_front_nazev').textContent = d.odrudy_nazev;
+      $('out_back_nazev').textContent = d.odrudy_nazev;
+      $('out_front_zatrid').textContent = d.zatrid_cukr;
+      $('out_back_zatrid').textContent = d.zatrid_kratke;
+      $('out_front_rocnik').textContent = d.rocnik;
+      $('out_back_rocnik').textContent = d.rocnik;
+      $('out_trat').textContent = d.vinicni_trat;
+      $('out_energie').textContent = d.energeticka_hodnota;
+      $('out_obsahuje').textContent = d.obsahuje;
+      $('out_sarze').textContent = d.cislo_sarze;
+      $('out_objem').textContent = d.objem;
+      $('out_alc_num').textContent = m ? m[1] : d.alkohol;
       $('out_alc_unit').textContent = m ? m[2] : '';
 
       const layerTxt = mode === 'spot' ? 'Spot_UV (100% M)' : (mode === 'preview' ? 'NAHLED' : 'CMYK');
-      $('slugLeft').textContent = `${currentCode} | ${nazev} (${rocnik}) | Trim: 150×95 mm | Bleed: 3 mm | ${layerTxt}`;
-      $('slugRight').textContent = `č.š.: ${sarze} | Vinařství Salajka`;
+      $('slugLeft').textContent = `${d.kod} | ${d.odrudy_nazev} (${d.rocnik}) | Trim: 150×95 mm | Bleed: 3 mm | ${layerTxt}`;
+      $('slugRight').textContent = `č.š.: ${d.cislo_sarze} | Vinařství Salajka`;
 
-      const url = $('f_url').value.trim();
-      if (url && window.SalajkaQR) {
+      const qrMode = d.qr_rezim;
+      $('nutritionFields').classList.toggle('hidden', qrMode === 'url');
+      $('customUrlField').classList.toggle('hidden', qrMode !== 'url');
+
+      let qrPayload = '';
+      if (qrMode === 'elabel') {
+        qrPayload = buildElabelUrl(d);
+        $('qrOpenLink').href = qrPayload;
+        $('qrOpenLink').classList.remove('hidden');
+        $('qrPreviewText').classList.add('hidden');
+      } else if (qrMode === 'text') {
+        qrPayload = buildQrPlainText(d);
+        $('qrOpenLink').classList.add('hidden');
+        $('qrPreviewText').textContent = qrPayload;
+        $('qrPreviewText').classList.remove('hidden');
+      } else {
+        qrPayload = d.url_e_etiketa;
+        if (qrPayload) {
+          $('qrOpenLink').href = qrPayload;
+          $('qrOpenLink').classList.remove('hidden');
+        } else {
+          $('qrOpenLink').classList.add('hidden');
+        }
+        $('qrPreviewText').classList.add('hidden');
+      }
+
+      if (qrPayload && window.SalajkaQR) {
         try {
-          $('qrSlot').innerHTML = window.SalajkaQR.generateQrSvg(url, 2);
+          $('qrSlot').innerHTML = window.SalajkaQR.generateQrSvg(qrPayload, 2);
+          const info = window.SalajkaQR.getQrInfo(qrPayload);
+          $('qrInfoLabel').textContent = `QR verze ${info.version} (${info.modules}×${info.modules}) • ${info.bytes} B`;
         } catch (err) {
           $('qrSlot').textContent = 'QR chyba';
+          $('qrInfoLabel').textContent = err.message || 'QR chyba';
         }
+      } else {
+        $('qrSlot').innerHTML = '';
+        $('qrInfoLabel').textContent = 'Zadejte obsah pro QR kód';
       }
     }
 
@@ -655,13 +1009,90 @@
         const cols = line.split(';');
         const obj = {};
         headers.forEach((h, i) => { obj[h] = (cols[i] || '').trim(); });
-        return obj;
+        return normalizeRow(obj);
       });
     }
 
-    $('varietySelect').addEventListener('change', (e) => loadRowIntoForm(rows[Number(e.target.value)]));
-    ['renderMode', 'shadowMode', 'f_nazev', 'f_zatrid_cukr', 'f_zatrid_kratke', 'f_rocnik', 'f_trat', 'f_sarze', 'f_energie', 'f_alkohol', 'f_objem', 'f_url']
-      .forEach((id) => $(id).addEventListener('input', renderPreview));
+    function exportSemicolonCsv(list) {
+      const sanitize = (v) => String(v || '').replace(/[\r\n]+/g, ' ').replace(/;/g, ',');
+      const header = CSV_COLUMNS.join(';');
+      const body = list.map((r) => CSV_COLUMNS.map((c) => sanitize(r[c])).join(';'));
+      return '\uFEFF' + [header, ...body].join('\r\n') + '\r\n';
+    }
+
+    $('varietySelect').addEventListener('change', (e) => loadRowIntoForm(Number(e.target.value)));
+
+    const formFieldIds = [
+      'f_kod', 'f_nazev', 'f_zatrid_cukr', 'f_zatrid_kratke', 'f_rocnik', 'f_trat',
+      'f_sarze', 'f_obsahuje', 'f_energie', 'f_alkohol', 'f_objem',
+      'f_qr_rezim', 'f_slozeni', 'f_tuky', 'f_nasycene', 'f_sacharidy', 'f_cukry',
+      'f_bilkoviny', 'f_sul', 'f_url'
+    ];
+    formFieldIds.forEach((id) => {
+      $(id).addEventListener('input', () => {
+        renderPreview();
+        showStatus('Neuložené změny — klikněte na „Uložit změny“ nebo „Uložit jako nové“.', true, 0);
+      });
+    });
+    ['renderMode', 'shadowMode'].forEach((id) => $(id).addEventListener('input', renderPreview));
+
+    $('btnSaveWine').addEventListener('click', () => {
+      rows[currentIndex] = readFormData();
+      persistRows();
+      populateSelect();
+      showStatus(`Šablona „${rows[currentIndex].odrudy_nazev || rows[currentIndex].kod}“ uložena ✓`);
+    });
+
+    $('btnSaveAsNew').addEventListener('click', () => {
+      const data = readFormData();
+      const exists = rows.some((r) => r.kod === data.kod);
+      if (exists || !data.kod || data.kod === 'ETIKETA') {
+        data.kod = generateUniqueCode(data.odrudy_nazev, data.rocnik, rows);
+        $('f_kod').value = data.kod;
+      }
+      rows.push(data);
+      currentIndex = rows.length - 1;
+      persistRows();
+      populateSelect();
+      renderPreview();
+      showStatus(`Nová šablona „${data.kod}“ přidána a uložena ✓`);
+    });
+
+    $('btnDeleteWine').addEventListener('click', () => {
+      if (rows.length <= 1) return;
+      const cur = rows[currentIndex];
+      if (!confirm(`Opravdu smazat šablonu „${cur.kod} — ${cur.odrudy_nazev}“?`)) return;
+      rows.splice(currentIndex, 1);
+      currentIndex = Math.max(0, currentIndex - 1);
+      persistRows();
+      populateSelect();
+      loadRowIntoForm(currentIndex);
+      showStatus('Šablona smazána.');
+    });
+
+    $('btnResetDefaults').addEventListener('click', () => {
+      if (!confirm('Obnovit výchozí seznam vín? Neexportované vlastní šablony v prohlížeči budou přepsány.')) return;
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      rows = defaultRows.map((r) => ({ ...r }));
+      currentIndex = 0;
+      populateSelect();
+      loadRowIntoForm(0);
+      showStatus('Obnoven výchozí seznam vín.');
+    });
+
+    $('btnExportCsv').addEventListener('click', () => {
+      const csv = exportSemicolonCsv(rows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'odrudy.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showStatus(`Exportováno ${rows.length} šablon do odrudy.csv ✓`);
+    });
 
     $('csvUpload').addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -671,11 +1102,15 @@
         const parsed = parseSemicolonCsv(reader.result);
         if (parsed.length) {
           rows = parsed;
+          currentIndex = 0;
+          persistRows();
           populateSelect();
-          loadRowIntoForm(rows[0]);
+          loadRowIntoForm(0);
+          showStatus(`Načteno a uloženo ${rows.length} šablon z CSV ✓`);
         }
       };
       reader.readAsText(file, 'UTF-8');
+      e.target.value = '';
     });
 
     (async () => {
@@ -684,11 +1119,14 @@
         const res = await fetch('data/odrudy.csv');
         if (res.ok) {
           const parsed = parseSemicolonCsv(await res.text());
-          if (parsed.length) rows = parsed;
+          if (parsed.length) defaultRows = parsed;
         }
       } catch (e) {}
+
+      const saved = loadPersistedRows();
+      rows = saved || defaultRows.map((r) => ({ ...r }));
       populateSelect();
-      loadRowIntoForm(rows[0]);
+      loadRowIntoForm(0);
     })();
   </script>
 </body>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-etiketa — Vinařství Salajka</title>
+  <style>
+    :root {
+      --navy: #141B3E;
+      --gold: #C89228;
+      --gold-soft: #FBF6EA;
+      --ink: #1A1A1A;
+      --muted: #525866;
+      --border: #E5E7EB;
+      --bg: #F6F5F1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #FFFFFF;
+      border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(20, 27, 62, 0.08);
+      overflow: hidden;
+      border: 1px solid rgba(200, 146, 40, 0.25);
+    }
+
+    .header {
+      background: var(--navy);
+      color: #FFFFFF;
+      padding: 20px 22px 18px;
+      text-align: center;
+      border-bottom: 3px solid var(--gold);
+    }
+
+    .brand {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #E6C163;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .wine-name {
+      margin: 0;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      line-height: 1.15;
+    }
+
+    .wine-sub {
+      margin-top: 6px;
+      font-size: 13.5px;
+      color: #E5E7EB;
+    }
+
+    .body {
+      padding: 20px 22px 22px;
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .pill {
+      background: var(--gold-soft);
+      border: 1px solid rgba(200, 146, 40, 0.35);
+      color: var(--navy);
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--navy);
+      margin: 18px 0 8px;
+      padding-bottom: 5px;
+      border-bottom: 1.5px solid var(--gold);
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    .ingredients {
+      font-size: 14.5px;
+      margin: 0;
+    }
+
+    .allergen-box {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #FEF3C7;
+      border-left: 3px solid var(--gold);
+      border-radius: 4px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #78350F;
+    }
+
+    table.nutrition {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    table.nutrition th,
+    table.nutrition td {
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    table.nutrition th {
+      font-size: 12.5px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    table.nutrition td:last-child,
+    table.nutrition th:last-child {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    table.nutrition tr.sub td:first-child {
+      padding-left: 20px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    table.nutrition tr.sub td:last-child {
+      font-weight: 400;
+    }
+
+    .note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .producer {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+      display: grid;
+      gap: 2px;
+    }
+
+    .producer strong { color: var(--ink); }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card" id="app">
+    <header class="header">
+      <div class="brand">Vinařství Salajka • Elektronická etiketa</div>
+      <h1 class="wine-name" id="v_nazev">Víno</h1>
+      <div class="wine-sub" id="v_zatrid"></div>
+    </header>
+
+    <div class="body" id="content">
+      <div class="meta-pills" id="v_pills"></div>
+
+      <h2>Složení</h2>
+      <p class="ingredients" id="v_slozeni"></p>
+      <div class="allergen-box" id="v_alergeny"></div>
+
+      <h2>Výživové údaje (na 100 ml)</h2>
+      <table class="nutrition" aria-label="Výživové údaje na 100 ml">
+        <thead>
+          <tr>
+            <th>Výživová hodnota</th>
+            <th>ve 100 ml</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Energetická hodnota</td>
+            <td id="v_energie"></td>
+          </tr>
+          <tr>
+            <td>Tuky</td>
+            <td id="v_tuky"></td>
+          </tr>
+          <tr class="sub">
+            <td>z toho nasycené mastné kyseliny</td>
+            <td id="v_nasycene"></td>
+          </tr>
+          <tr>
+            <td>Sacharidy</td>
+            <td id="v_sacharidy"></td>
+          </tr>
+          <tr class="sub">
+            <td>z toho cukry</td>
+            <td id="v_cukry"></td>
+          </tr>
+          <tr>
+            <td>Bílkoviny</td>
+            <td id="v_bilkoviny"></td>
+          </tr>
+          <tr>
+            <td>Sůl</td>
+            <td id="v_sul"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p class="note" id="v_note"></p>
+
+      <footer class="producer">
+        <div><strong>Plněno v:</strong> Vojtěch Salajka</div>
+        <div>Obec Dolní Bojanovice • IČ: 01129813</div>
+        <div id="v_trat_row"></div>
+        <div>Víno z České republiky</div>
+      </footer>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const p = new URLSearchParams(window.location.search);
+      const get = (key, fallback = '') => (p.get(key) || fallback).trim();
+
+      const nazev = get('n', 'Víno — Vinařství Salajka');
+      const rocnik = get('r');
+      const zatrid = get('z');
+      const trat = get('t');
+      const sarze = get('s');
+      const energie = get('e', '—').replace(/\s*ve\s*100\s*ml/i, '');
+      const alkohol = get('a');
+      const objem = get('o');
+      const slozeni = get('sl', 'hrozny, konzervanty a antioxidanty (oxid siřičitý)');
+      const alergeny = get('al', 'Obsahuje oxid siřičitý');
+      const tuky = get('tu', '0 g');
+      const nasycene = get('nm', '0 g');
+      const sacharidy = get('sa', '—');
+      const cukry = get('cu', '—');
+      const bilkoviny = get('bi', '0 g');
+      const sul = get('su', '0 g');
+
+      document.title = `${nazev}${rocnik ? ' ' + rocnik : ''} — E-etiketa | Vinařství Salajka`;
+      document.getElementById('v_nazev').textContent = nazev;
+      document.getElementById('v_zatrid').textContent = [zatrid, rocnik ? `Ročník ${rocnik}` : ''].filter(Boolean).join(' • ');
+
+      const pills = [];
+      if (rocnik) pills.push(`Ročník ${rocnik}`);
+      if (sarze) pills.push(`č.š.: ${sarze}`);
+      if (alkohol) pills.push(`Alk.: ${alkohol}`);
+      if (objem) pills.push(objem);
+
+      const pillsEl = document.getElementById('v_pills');
+      pills.forEach((txt) => {
+        const span = document.createElement('span');
+        span.className = 'pill';
+        span.textContent = txt;
+        pillsEl.appendChild(span);
+      });
+
+      // Zvýraznění alergenů ve složení dle nařízení EU 1169/2011 (bezpečně bez raw HTML injection)
+      const escapeHtml = (str) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const highlightAllergens = (str) => escapeHtml(str).replace(
+        /(oxid\s+siřičitý|siřičitany|siřičitan[a-záčďéěíňóřšťúůýž]*|vaječ[a-záčďéěíňóřšťúůýž]*|mléč[a-záčďéěíňóřšťúůýž]*|kasein|lysozym|albumin)/gi,
+        '<strong>$1</strong>'
+      );
+      document.getElementById('v_slozeni').innerHTML = highlightAllergens(slozeni);
+
+      const alEl = document.getElementById('v_alergeny');
+      if (alergeny) {
+        alEl.textContent = alergeny;
+      } else {
+        alEl.style.display = 'none';
+      }
+
+      document.getElementById('v_energie').textContent = energie;
+      document.getElementById('v_tuky').textContent = tuky;
+      document.getElementById('v_nasycene').textContent = nasycene;
+      document.getElementById('v_sacharidy').textContent = sacharidy;
+      document.getElementById('v_cukry').textContent = cukry;
+      document.getElementById('v_bilkoviny').textContent = bilkoviny;
+      document.getElementById('v_sul').textContent = sul;
+
+      const isZero = (v) => /^0([,\.]0+)?\s*g$/i.test(v);
+      const noteEl = document.getElementById('v_note');
+      if (isZero(tuky) && isZero(nasycene) && isZero(bilkoviny) && isZero(sul)) {
+        noteEl.textContent = 'Obsahuje zanedbatelné množství tuků, nasycených mastných kyselin, bílkovin a soli.';
+      } else {
+        noteEl.style.display = 'none';
+      }
+
+      const tratRow = document.getElementById('v_trat_row');
+      if (trat) {
+        tratRow.textContent = `Viniční trať ${trat}`;
+      } else {
+        tratRow.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,12 +1,12 @@
 /**
  * Čistý offline generátor vektorového QR kódu (ISO/IEC 18004, Byte Mode, ECC Level M)
  * Vrací ostrý vektorový <svg> s jedinou <path> (bez rastru, bez závislostí).
- * Podporuje verze 1 až 10 (až 213 UTF-8 bajtů při korekci M — více než dost pro URL e-etikety).
+ * Podporuje verze 1 až 20 (až 666 UTF-8 bajtů při korekci M — pro e-etiketu i přímý text hodnot).
  */
 (function (global) {
   'use strict';
 
-  // Tabulka parametrů pro ECC Level M (verze 1..10): [celkemDatovychKodu, eccNaBlok, pocetBlokuSk1, dataSk1, pocetBlokuSk2, dataSk2]
+  // Tabulka parametrů pro ECC Level M (verze 1..20): [celkemDatovychKodu, eccNaBlok, pocetBlokuSk1, dataSk1, pocetBlokuSk2, dataSk2]
   const ECC_M_TABLE = {
     1:  [16,  10, 1, 16, 0, 0],
     2:  [28,  16, 1, 28, 0, 0],
@@ -17,10 +17,20 @@
     7:  [124, 18, 4, 31, 0, 0],
     8:  [154, 22, 2, 38, 2, 39],
     9:  [182, 22, 3, 36, 2, 37],
-    10: [216, 26, 4, 43, 1, 44]
+    10: [216, 26, 4, 43, 1, 44],
+    11: [254, 30, 1, 50, 4, 51],
+    12: [290, 22, 6, 36, 2, 37],
+    13: [334, 22, 8, 37, 1, 38],
+    14: [365, 24, 4, 40, 5, 41],
+    15: [415, 24, 5, 41, 5, 42],
+    16: [453, 28, 7, 45, 3, 46],
+    17: [507, 28, 10, 46, 1, 47],
+    18: [563, 26, 9, 43, 4, 44],
+    19: [627, 26, 3, 44, 11, 45],
+    20: [669, 26, 3, 41, 13, 42]
   };
 
-  // Souřadnice zarovnávacích vzorů (Alignment Patterns) pro verze 1..10
+  // Souřadnice zarovnávacích vzorů (Alignment Patterns) pro verze 1..20
   const ALIGN_POS = {
     1:  [],
     2:  [6, 18],
@@ -31,7 +41,17 @@
     7:  [6, 22, 38],
     8:  [6, 24, 42],
     9:  [6, 26, 46],
-    10: [6, 28, 50]
+    10: [6, 28, 50],
+    11: [6, 30, 54],
+    12: [6, 32, 58],
+    13: [6, 34, 62],
+    14: [6, 26, 46, 66],
+    15: [6, 26, 48, 70],
+    16: [6, 26, 50, 74],
+    17: [6, 30, 54, 78],
+    18: [6, 30, 56, 82],
+    19: [6, 30, 58, 86],
+    20: [6, 34, 62, 90]
   };
 
   // GF(256) log / exp tabulky pro polynom 0x11D
@@ -84,6 +104,9 @@
   }
 
   function utf8Bytes(str) {
+    if (typeof TextEncoder !== 'undefined') {
+      return Array.from(new TextEncoder().encode(str));
+    }
     const out = [];
     for (let i = 0; i < str.length; i++) {
       let c = str.charCodeAt(i);
@@ -99,13 +122,13 @@
   }
 
   function selectVersion(byteLen) {
-    for (let v = 1; v <= 10; v++) {
+    for (let v = 1; v <= 20; v++) {
       const cap = ECC_M_TABLE[v][0];
       const countBits = v <= 9 ? 8 : 16;
       const neededBytes = Math.ceil((4 + countBits + byteLen * 8) / 8);
       if (neededBytes <= cap) return v;
     }
-    throw new Error('URL je příliš dlouhé pro QR verzi 1-10.');
+    throw new Error('Obsah QR kódu je příliš dlouhý (max. 666 bajtů pro QR verzi 1–20).');
   }
 
   function buildCodewords(bytes, version) {
@@ -391,5 +414,11 @@
     );
   }
 
-  global.SalajkaQR = { generateQrSvg };
+  function getQrInfo(text) {
+    const bytes = utf8Bytes(String(text || ''));
+    const version = selectVersion(bytes.length);
+    return { bytes: bytes.length, version, modules: version * 4 + 17 };
+  }
+
+  global.SalajkaQR = { generateQrSvg, getQrInfo };
 })(typeof window !== 'undefined' ? window : globalThis);
