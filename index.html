@@ -542,6 +542,16 @@
       <div class="field">
         <label for="f_energie">Energetická hodnota</label>
         <input id="f_energie" type="text" />
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;font-size:11.5px;color:#4B5563;">
+          <label style="display:inline-flex;align-items:center;gap:5px;margin:0;font-weight:500;cursor:pointer;">
+            <input type="checkbox" id="autoEnergy" checked style="width:auto;margin:0;" />
+            ⚡ Auto-přepočet (EU 1169/2011)
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-weight:500;white-space:nowrap;">
+            Kyseliny (g/l):
+            <input id="f_kyseliny" type="text" value="6,0" style="width:52px;padding:2px 5px;font-size:11.5px;" title="Titrační / organické kyseliny z rozboru v g/l (13 kJ / 3 kcal na 1 g)" />
+          </label>
+        </div>
       </div>
       <div class="grid-2">
         <div class="field">
@@ -1056,17 +1066,59 @@
 
     $('varietySelect').addEventListener('change', (e) => loadRowIntoForm(Number(e.target.value)));
 
+    function parseNum(str) {
+      const m = String(str || '').replace(/\s+/g, '').match(/-?[0-9]+(?:[,\.][0-9]+)?/);
+      return m ? parseFloat(m[0].replace(',', '.')) : 0;
+    }
+
+    function recalcEnergy() {
+      const alcPct = parseNum($('f_alkohol').value);
+      const sach = parseNum($('f_sacharidy').value);
+      const cukr = parseNum($('f_cukry').value);
+      const carbsG = Math.max(sach, cukr);
+      const fatG = parseNum($('f_tuky').value);
+      const protG = parseNum($('f_bilkoviny').value);
+      const acidsGl = parseNum($('f_kyseliny').value);
+
+      // EU 1169/2011 Příloha XIV (hodnoty na 100 ml):
+      // alkohol: % obj. * 0,789 g/ml -> 29 kJ / 7 kcal na 1 g
+      // sacharidy: 17 kJ / 4 kcal na 1 g
+      // tuky: 37 kJ / 9 kcal na 1 g
+      // bílkoviny: 17 kJ / 4 kcal na 1 g
+      // organické kyseliny (g/l / 10 = g/100 ml): 13 kJ / 3 kcal na 1 g
+      const alcG = alcPct * 0.789;
+      const acidsG = acidsGl / 10;
+      const kJ = Math.round(alcG * 29 + carbsG * 17 + fatG * 37 + protG * 17 + acidsG * 13);
+      const kcal = Math.round(alcG * 7 + carbsG * 4 + fatG * 9 + protG * 4 + acidsG * 3);
+
+      $('f_energie').value = `${kJ} kJ / ${kcal} kcal ve 100ml`;
+    }
+
+    const energyTriggerIds = new Set(['f_alkohol', 'f_sacharidy', 'f_cukry', 'f_tuky', 'f_bilkoviny', 'f_kyseliny']);
+
     const formFieldIds = [
       'f_styl', 'f_kod', 'f_nazev', 'f_zatrid_cukr', 'f_zatrid_kratke', 'f_rocnik', 'f_trat',
       'f_sarze', 'f_obsahuje', 'f_energie', 'f_alkohol', 'f_objem',
       'f_qr_rezim', 'f_slozeni', 'f_tuky', 'f_nasycene', 'f_sacharidy', 'f_cukry',
-      'f_bilkoviny', 'f_sul', 'f_url'
+      'f_bilkoviny', 'f_sul', 'f_url', 'f_kyseliny'
     ];
     formFieldIds.forEach((id) => {
       $(id).addEventListener('input', () => {
+        if (id === 'f_energie') {
+          $('autoEnergy').checked = false;
+        } else if (energyTriggerIds.has(id) && $('autoEnergy').checked) {
+          recalcEnergy();
+        }
         renderPreview();
         showStatus('Neuložené změny — klikněte na „Uložit změny“ nebo „Uložit jako nové“.', true, 0);
       });
+    });
+    $('autoEnergy').addEventListener('change', () => {
+      if ($('autoEnergy').checked) {
+        recalcEnergy();
+        renderPreview();
+        showStatus('Energetická hodnota přepočítána dle EU 1169/2011.', false, 3000);
+      }
     });
     ['renderMode', 'shadowMode'].forEach((id) => $(id).addEventListener('input', renderPreview));
 
