@@ -727,6 +727,8 @@
   <script src="scripts/qr_svg.js"></script>
   <script>
     const STORAGE_KEY = 'salajka_etikety_templates_v1';
+    // Sem po nasazení Google Apps Scriptu vložíme URL Webové aplikace (končí na /exec)
+    const CLOUD_SYNC_URL = '';
     const DEFAULT_INGREDIENTS = 'hrozny, konzervanty a antioxidanty (oxid siřičitý)';
     const DEFAULT_ALLERGENS = 'Obsahuje oxid siřičitý';
     const CSV_COLUMNS = [
@@ -1122,11 +1124,47 @@
     });
     ['renderMode', 'shadowMode'].forEach((id) => $(id).addEventListener('input', renderPreview));
 
+    async function syncFromCloud() {
+      if (!CLOUD_SYNC_URL) return null;
+      try {
+        const res = await fetch(CLOUD_SYNC_URL, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (json && json.ok && Array.isArray(json.rows) && json.rows.length) {
+          return json.rows.map(normalizeRow);
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    async function syncToCloud(successMsg) {
+      persistRows();
+      if (!CLOUD_SYNC_URL) {
+        showStatus(successMsg);
+        return;
+      }
+      showStatus('☁️ Ukládám do cloudu…', false, 0);
+      try {
+        const res = await fetch(CLOUD_SYNC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ rows })
+        });
+        const json = await res.json();
+        if (json && json.ok) {
+          showStatus(`☁️ ${successMsg} (synchronizováno)`);
+        } else {
+          showStatus(`${successMsg} (lokálně — chyba cloudu)`, true, 5000);
+        }
+      } catch (e) {
+        showStatus(`${successMsg} (uloženo lokálně — bez připojení ke cloudu)`, true, 5000);
+      }
+    }
+
     $('btnSaveWine').addEventListener('click', () => {
       rows[currentIndex] = readFormData();
-      persistRows();
       populateSelect();
-      showStatus(`Šablona „${rows[currentIndex].odrudy_nazev || rows[currentIndex].kod}“ uložena ✓`);
+      syncToCloud(`Šablona „${rows[currentIndex].odrudy_nazev || rows[currentIndex].kod}“ uložena ✓`);
     });
 
     $('btnSaveAsNew').addEventListener('click', () => {
@@ -1138,10 +1176,9 @@
       }
       rows.push(data);
       currentIndex = rows.length - 1;
-      persistRows();
       populateSelect();
       renderPreview();
-      showStatus(`Nová šablona „${data.kod}“ přidána a uložena ✓`);
+      syncToCloud(`Nová šablona „${data.kod}“ přidána ✓`);
     });
 
     $('btnDeleteWine').addEventListener('click', () => {
@@ -1150,20 +1187,19 @@
       if (!confirm(`Opravdu smazat šablonu „${cur.kod} — ${cur.odrudy_nazev}“?`)) return;
       rows.splice(currentIndex, 1);
       currentIndex = Math.max(0, currentIndex - 1);
-      persistRows();
       populateSelect();
       loadRowIntoForm(currentIndex);
-      showStatus('Šablona smazána.');
+      syncToCloud('Šablona smazána.');
     });
 
     $('btnResetDefaults').addEventListener('click', () => {
-      if (!confirm('Obnovit výchozí seznam vín? Neexportované vlastní šablony v prohlížeči budou přepsány.')) return;
+      if (!confirm('Obnovit výchozí seznam vín? Neexportované vlastní šablony budou přepsány.')) return;
       try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
       rows = defaultRows.map((r) => ({ ...r }));
       currentIndex = 0;
       populateSelect();
       loadRowIntoForm(0);
-      showStatus('Obnoven výchozí seznam vín.');
+      syncToCloud('Obnoven výchozí seznam vín.');
     });
 
     $('btnExportCsv').addEventListener('click', () => {
@@ -1189,10 +1225,9 @@
         if (parsed.length) {
           rows = parsed;
           currentIndex = 0;
-          persistRows();
           populateSelect();
           loadRowIntoForm(0);
-          showStatus(`Načteno a uloženo ${rows.length} šablon z CSV ✓`);
+          syncToCloud(`Načteno ${rows.length} šablon z CSV ✓`);
         }
       };
       reader.readAsText(file, 'UTF-8');
@@ -1213,6 +1248,15 @@
       rows = saved || defaultRows.map((r) => ({ ...r }));
       populateSelect();
       loadRowIntoForm(0);
+
+      const cloudRows = await syncFromCloud();
+      if (cloudRows) {
+        rows = cloudRows;
+        persistRows();
+        populateSelect();
+        loadRowIntoForm(0);
+        showStatus(`☁️ Načteno ${rows.length} sdílených šablon z cloudu`, false, 3000);
+      }
     })();
   </script>
 </body>
