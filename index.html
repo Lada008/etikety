@@ -398,11 +398,33 @@
     .metric-alcohol { font-size: 10.8pt; }
     .metric-alcohol .alc-num { font-size: 13.5pt; }
 
-    /* Řízení tiskových vrstev */
+    /* Řízení tiskových vrstev a stylu etikety */
+    .folklor-artwork-img {
+      display: none;
+      width: 98mm;
+      height: 76mm;
+      object-fit: cover;
+    }
+    .press-sheet[data-style="folklor"] .bleed-box { background: #F4F3EE; }
+    .press-sheet[data-style="folklor"] #logoSlot { display: none !important; }
+    .press-sheet[data-style="folklor"] .folklor-artwork-img { display: block; }
+    .press-sheet[data-style="folklor"] .vertical-divider {
+      background: linear-gradient(180deg, #A98237 0%, #D9B664 48%, #9A7329 100%);
+    }
+    .press-sheet[data-style="folklor"] .gold-rule {
+      background: linear-gradient(90deg, #A98237 0%, #D9B664 50%, #9A7329 100%);
+    }
+    .press-sheet[data-style="folklor"] .front-vintage { color: #9E7628; }
+    .press-sheet[data-style="folklor"] .front-vintage .vintage-rule {
+      background: linear-gradient(90deg, #A98237, #D9B664, #A98237);
+    }
+    .press-sheet[data-style="folklor"] .back-wave-accent path { fill: #C8A85B; }
+
     .press-sheet[data-mode="cmyk"] .layer-spot-uv-emboss { display: none !important; }
     .press-sheet[data-shadow="off"] .layer-depth-shadow { display: none !important; }
     .press-sheet[data-mode="spot"] .layer-cmyk-base,
     .press-sheet[data-mode="spot"] .layer-depth-shadow,
+    .press-sheet[data-mode="spot"] .folklor-artwork-img,
     .press-sheet[data-mode="spot"] .front-variety-block,
     .press-sheet[data-mode="spot"] .vertical-divider,
     .press-sheet[data-mode="spot"] .back-panel { visibility: hidden !important; }
@@ -450,6 +472,14 @@
         <button type="button" id="btnResetDefaults" title="Obnovit výchozí seznam vín">↺</button>
       </div>
       <div class="status-bar" id="saveStatus"></div>
+
+      <div class="field">
+        <label for="f_styl">Styl etikety (motiv)</label>
+        <select id="f_styl">
+          <option value="klasik">Klasický (modrá vlnka, bílý podklad)</option>
+          <option value="folklor">Folklorní (moravský ornament, krémový)</option>
+        </select>
+      </div>
 
       <div class="grid-2">
         <div class="field">
@@ -612,6 +642,7 @@
             <div class="trim-box">
               <section class="front-panel">
                 <div class="logo-artwork-wrap" id="logoSlot"></div>
+                <img class="logo-artwork-wrap folklor-artwork-img" src="assets/logo_salajka_folklor.png" alt="Vinařství Salajka — folklorní motiv" />
                 <div class="front-variety-block">
                   <div class="front-variety-name" id="out_front_nazev"></div>
                   <div class="front-classification" id="out_front_zatrid"></div>
@@ -692,7 +723,7 @@
       'kod', 'odrudy_nazev', 'zatrid_cukr', 'zatrid_kratke', 'rocnik',
       'vinicni_trat', 'cislo_sarze', 'energeticka_hodnota', 'alkohol', 'objem',
       'obsahuje', 'url_e_etiketa', 'slozeni', 'tuky', 'nasycene',
-      'sacharidy', 'cukry', 'bilkoviny', 'sul', 'qr_rezim'
+      'sacharidy', 'cukry', 'bilkoviny', 'sul', 'qr_rezim', 'styl_etikety'
     ];
 
     const DEFAULT_ROWS = [
@@ -705,7 +736,7 @@
         url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rb-2611',
         slozeni: DEFAULT_INGREDIENTS,
         tuky: '0 g', nasycene: '0 g', sacharidy: '1,5 g', cukry: '0,9 g', bilkoviny: '0 g', sul: '0 g',
-        qr_rezim: 'elabel'
+        qr_rezim: 'elabel', styl_etikety: 'klasik'
       },
       {
         kod: '02_RV_2026', odrudy_nazev: 'Ryzlink vlašský',
@@ -716,7 +747,7 @@
         url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rv-2614',
         slozeni: DEFAULT_INGREDIENTS,
         tuky: '0 g', nasycene: '0 g', sacharidy: '0,8 g', cukry: '0,3 g', bilkoviny: '0 g', sul: '0 g',
-        qr_rezim: 'elabel'
+        qr_rezim: 'elabel', styl_etikety: 'klasik'
       },
       {
         kod: '03_CM_2025', odrudy_nazev: 'Cabernet Moravia',
@@ -727,7 +758,7 @@
         url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2025/cm-2508',
         slozeni: DEFAULT_INGREDIENTS,
         tuky: '0 g', nasycene: '0 g', sacharidy: '0,6 g', cukry: '0,2 g', bilkoviny: '0 g', sul: '0 g',
-        qr_rezim: 'elabel'
+        qr_rezim: 'elabel', styl_etikety: 'klasik'
       }
     ];
 
@@ -760,7 +791,8 @@
         cukry: (r.cukry || '').trim(),
         bilkoviny: (r.bilkoviny || '0 g').trim(),
         sul: (r.sul || '0 g').trim(),
-        qr_rezim: ['elabel', 'text', 'url'].includes(r.qr_rezim) ? r.qr_rezim : 'elabel'
+        qr_rezim: ['elabel', 'text', 'url'].includes(r.qr_rezim) ? r.qr_rezim : 'elabel',
+        styl_etikety: ['klasik', 'folklor'].includes(r.styl_etikety) ? r.styl_etikety : 'klasik'
       };
     }
 
@@ -785,7 +817,8 @@
         cukry: $('f_cukry').value,
         bilkoviny: $('f_bilkoviny').value,
         sul: $('f_sul').value,
-        qr_rezim: $('f_qr_rezim').value
+        qr_rezim: $('f_qr_rezim').value,
+        styl_etikety: $('f_styl').value
       });
     }
 
@@ -887,6 +920,7 @@
       $('f_bilkoviny').value = row.bilkoviny;
       $('f_sul').value = row.sul;
       $('f_qr_rezim').value = row.qr_rezim;
+      $('f_styl').value = row.styl_etikety;
       $('saveStatus').textContent = '';
       renderPreview();
     }
@@ -936,10 +970,10 @@
       const sheet = $('pressSheet');
       const mode = $('renderMode').value;
       const shadow = $('shadowMode').value;
+      const d = readFormData();
       sheet.setAttribute('data-mode', mode);
       sheet.setAttribute('data-shadow', shadow);
-
-      const d = readFormData();
+      sheet.setAttribute('data-style', d.styl_etikety);
       const m = d.alkohol.match(/^([0-9]+(?:[,\.][0-9]+)?\s*%)\s*(.*)$/);
 
       $('out_front_nazev').textContent = d.odrudy_nazev;
@@ -1023,7 +1057,7 @@
     $('varietySelect').addEventListener('change', (e) => loadRowIntoForm(Number(e.target.value)));
 
     const formFieldIds = [
-      'f_kod', 'f_nazev', 'f_zatrid_cukr', 'f_zatrid_kratke', 'f_rocnik', 'f_trat',
+      'f_styl', 'f_kod', 'f_nazev', 'f_zatrid_cukr', 'f_zatrid_kratke', 'f_rocnik', 'f_trat',
       'f_sarze', 'f_obsahuje', 'f_energie', 'f_alkohol', 'f_objem',
       'f_qr_rezim', 'f_slozeni', 'f_tuky', 'f_nasycene', 'f_sacharidy', 'f_cukry',
       'f_bilkoviny', 'f_sul', 'f_url'
