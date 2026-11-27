@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vinařství Salajka — Generátor tiskových etiket</title>
+  <style>
+    :root {
+      --font-serif: Georgia, 'Times New Roman', serif;
+      --font-sans: 'Bahnschrift', 'Segoe UI', Arial, sans-serif;
+      --color-navy: #141B3E;
+      --color-gold: #C89228;
+      --color-gold-dark: #A67518;
+      --color-ink: #1A1A1A;
+      --ui-bg: #F3F4F6;
+      --ui-card: #FFFFFF;
+      --ui-border: #D1D5DB;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--ui-bg);
+      color: #111827;
+    }
+
+    /* ============ OVLÁDACÍ PANEL (skrytý při tisku do PDF) ============ */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--ui-card);
+      border-right: 1px solid var(--ui-border);
+      padding: 18px 20px;
+      overflow-y: auto;
+    }
+
+    .sidebar h1 {
+      font-size: 18px;
+      margin: 0 0 4px 0;
+      color: var(--color-navy);
+    }
+
+    .sidebar p.sub {
+      font-size: 12.5px;
+      color: #4B5563;
+      margin: 0 0 14px 0;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    button, .file-btn {
+      cursor: pointer;
+      border: 1px solid #D1D5DB;
+      background: #FFFFFF;
+      color: #111827;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button.primary {
+      background: var(--color-navy);
+      color: #FFFFFF;
+      border-color: var(--color-navy);
+    }
+
+    button.primary:hover { background: #1E285A; }
+    button:hover, .file-btn:hover { background: #F9FAFB; }
+    button.primary:hover { background: #1E285A; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6B7280;
+      margin: 14px 0 8px 0;
+      border-top: 1px solid #E5E7EB;
+      padding-top: 10px;
+    }
+
+    .field {
+      margin-bottom: 8px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 3px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #D1D5DB;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .preview-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 12px;
+      overflow: auto;
+    }
+
+    .stage-hint {
+      font-size: 12.5px;
+      color: #4B5563;
+      text-align: center;
+      max-width: 680px;
+    }
+
+    .sheet-frame {
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+      background: #FFFFFF;
+      line-height: 0;
+    }
+
+    /* ============ TISKOVÝ ARCH ETIKETY (168 × 113 mm) ============ */
+    @page {
+      size: 168mm 113mm;
+      margin: 0;
+    }
+
+    .press-sheet {
+      position: relative;
+      width: 168mm;
+      height: 113mm;
+      background: #FFFFFF;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      color: var(--color-ink);
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .crop-marks-svg {
+      position: absolute;
+      inset: 0;
+      width: 168mm;
+      height: 113mm;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .bleed-box {
+      position: absolute;
+      left: 6mm;
+      top: 6mm;
+      width: 156mm;
+      height: 101mm;
+      overflow: hidden;
+      background: #FFFFFF;
+    }
+
+    .trim-box {
+      position: relative;
+      left: 3mm;
+      top: 3mm;
+      width: 150mm;
+      height: 95mm;
+    }
+
+    .front-panel {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 95mm;
+      height: 95mm;
+    }
+
+    .logo-artwork-wrap {
+      position: absolute;
+      left: -3mm;
+      top: 0mm;
+      width: 98mm;
+      height: 76mm;
+    }
+
+    .logo-artwork-wrap svg { width: 98mm; height: 76mm; display: block; }
+
+    .front-variety-block {
+      position: absolute;
+      left: 2mm;
+      right: 2mm;
+      top: 75.8mm;
+      text-align: center;
+    }
+
+    .front-variety-name {
+      font-family: var(--font-serif);
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: 0.75pt;
+      text-transform: uppercase;
+      color: var(--color-ink);
+      line-height: 1.08;
+    }
+
+    .front-classification {
+      margin-top: 1.2mm;
+      font-family: var(--font-sans);
+      font-size: 7.3pt;
+      font-weight: 600;
+      letter-spacing: 0.9pt;
+      text-transform: uppercase;
+      color: var(--color-ink);
+      line-height: 1.18;
+    }
+
+    .front-vintage {
+      margin-top: 1.3mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5mm;
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 15pt;
+      font-weight: 400;
+      letter-spacing: 1.8pt;
+      color: var(--color-gold-dark);
+      line-height: 1;
+    }
+
+    .front-vintage .vintage-rule {
+      display: inline-block;
+      width: 11mm;
+      height: 0.35mm;
+      background: linear-gradient(90deg, #B88628, #E6C163, #B88628);
+    }
+
+    .vertical-divider {
+      position: absolute;
+      left: 95mm;
+      top: -3mm;
+      width: 1.15mm;
+      height: 101mm;
+      background: linear-gradient(180deg, #B8821D 0%, #E7C25B 48%, #B27B18 100%);
+    }
+
+    .back-panel {
+      position: absolute;
+      left: 98.5mm;
+      top: 3mm;
+      width: 49mm;
+      height: 89mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .back-header-variety {
+      font-family: var(--font-serif);
+      font-size: 11.2pt;
+      font-weight: 700;
+      letter-spacing: 0.35pt;
+      text-transform: uppercase;
+      line-height: 1.12;
+    }
+
+    .back-header-vintage {
+      margin-top: 0.8mm;
+      font-family: var(--font-sans);
+      font-size: 8.2pt;
+      font-weight: 600;
+      letter-spacing: 1.8pt;
+      text-transform: uppercase;
+    }
+
+    .back-wave-accent { margin: 1.6mm 0 1.8mm 0; width: 24mm; height: 1.8mm; display: block; }
+    .back-origin-block { font-size: 7.8pt; line-height: 1.38; }
+
+    .gold-rule {
+      width: 100%;
+      height: 0.75mm;
+      background: linear-gradient(90deg, #BA8420 0%, #EAC662 50%, #B37B18 100%);
+      margin: 1.8mm 0;
+    }
+
+    .back-producer-row { display: flex; align-items: center; justify-content: space-between; gap: 2mm; }
+    .back-producer-text { font-size: 7.7pt; line-height: 1.36; }
+    .wine-glass-mark { width: 9.2mm; height: 11.4mm; flex-shrink: 0; }
+    .wine-glass-mark svg { width: 100%; height: 100%; display: block; }
+
+    .back-energy-block { font-size: 7.4pt; line-height: 1.34; }
+    .back-qr-row { display: flex; align-items: center; gap: 2.6mm; margin-top: 1.4mm; }
+    .qr-container { width: 15.5mm; height: 15.5mm; flex-shrink: 0; }
+    .qr-container svg { width: 100%; height: 100%; display: block; }
+    .qr-caption { font-size: 7.1pt; line-height: 1.32; }
+    .back-sulfites-lot { margin-top: 1.4mm; font-size: 7.2pt; line-height: 1.25; }
+
+    .back-footer-metrics {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      font-family: var(--font-serif);
+      line-height: 1;
+      padding-top: 0.4mm;
+    }
+    .metric-volume { font-size: 13.5pt; }
+    .metric-alcohol { font-size: 10.8pt; }
+    .metric-alcohol .alc-num { font-size: 13.5pt; }
+
+    /* Řízení tiskových vrstev */
+    .press-sheet[data-mode="cmyk"] .layer-spot-uv-emboss { display: none !important; }
+    .press-sheet[data-shadow="off"] .layer-depth-shadow { display: none !important; }
+    .press-sheet[data-mode="spot"] .layer-cmyk-base,
+    .press-sheet[data-mode="spot"] .layer-depth-shadow,
+    .press-sheet[data-mode="spot"] .front-variety-block,
+    .press-sheet[data-mode="spot"] .vertical-divider,
+    .press-sheet[data-mode="spot"] .back-panel { visibility: hidden !important; }
+    .press-sheet[data-mode="spot"] .layer-spot-uv-emboss { display: inline !important; opacity: 1 !important; }
+    .press-sheet[data-mode="preview"] .layer-spot-uv-emboss { display: inline !important; opacity: 0.42 !important; mix-blend-mode: multiply; }
+    .press-sheet[data-mode="preview"] .trim-guide-preview { display: inline !important; }
+    .trim-guide-preview { display: none; }
+
+    /* Režim tisku do PDF */
+    @media print {
+      body { background: #FFFFFF; }
+      .sidebar, .stage-hint { display: none !important; }
+      .app-shell { display: block; }
+      .preview-stage { padding: 0; margin: 0; display: block; }
+      .sheet-frame { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <h1>Vinařství Salajka — Etikety</h1>
+      <p class="sub">Tisková šablona 150×95 mm + 3 mm spadávka + vektorový QR kód</p>
+
+      <div class="btn-row">
+        <button class="primary" onclick="window.print()">🖨️ Uložit / Tisk PDF</button>
+        <label class="file-btn">
+          📂 Načíst CSV
+          <input type="file" id="csvUpload" accept=".csv,text/csv" style="display:none" />
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="varietySelect">Vybrat odrůdu z tabulky</label>
+        <select id="varietySelect"></select>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="renderMode">Tisková vrstva</label>
+          <select id="renderMode">
+            <option value="cmyk">Tisk (CMYK)</option>
+            <option value="preview" selected>Náhled (+ Spot_UV + ořez)</option>
+            <option value="spot">Separace Spot_UV (100% M)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="shadowMode">Stínování loga</label>
+          <select id="shadowMode">
+            <option value="on" selected>Zapnuto</option>
+            <option value="off">Vypnuto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title">Údaje na etiketě</div>
+
+      <div class="field">
+        <label>Název odrůdy</label>
+        <input id="f_nazev" type="text" />
+      </div>
+      <div class="field">
+        <label>Zatřídění a cukr (přední strana)</label>
+        <input id="f_zatrid_cukr" type="text" />
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Zatřídění (zadní)</label>
+          <input id="f_zatrid_kratke" type="text" />
+        </div>
+        <div class="field">
+          <label>Ročník</label>
+          <input id="f_rocnik" type="text" />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Viniční trať</label>
+          <input id="f_trat" type="text" />
+        </div>
+        <div class="field">
+          <label>Číslo šarže (č.š.)</label>
+          <input id="f_sarze" type="text" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Energetická hodnota</label>
+        <input id="f_energie" type="text" />
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Alkohol</label>
+          <input id="f_alkohol" type="text" />
+        </div>
+        <div class="field">
+          <label>Objem</label>
+          <input id="f_objem" type="text" />
+        </div>
+      </div>
+      <div class="field">
+        <label>URL e-etikety (pro vektorový QR kód)</label>
+        <input id="f_url" type="url" />
+      </div>
+    </aside>
+
+    <main class="preview-stage">
+      <div class="stage-hint">
+        Tip: Klikněte na <strong>Uložit / Tisk PDF</strong> → vyberte <em>Uložit jako PDF</em>,
+        <strong>Okraje: Žádné</strong> a zaškrtněte <strong>Grafika na pozadí</strong>.
+        Výsledné PDF má přesný tiskový rozměr 168×113 mm (150×95 mm + 3 mm spadávka + ořezové značky).
+      </div>
+
+      <div class="sheet-frame">
+        <div class="press-sheet" id="pressSheet" data-mode="preview" data-shadow="on">
+          <svg class="crop-marks-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 113">
+            <g stroke="#000000" stroke-width="0.15" fill="none">
+              <line x1="2" y1="9" x2="6" y2="9"/><line x1="9" y1="2" x2="9" y2="6"/>
+              <line x1="162" y1="9" x2="166" y2="9"/><line x1="159" y1="2" x2="159" y2="6"/>
+              <line x1="2" y1="104" x2="6" y2="104"/><line x1="9" y1="107" x2="9" y2="111"/>
+              <line x1="162" y1="104" x2="166" y2="104"/><line x1="159" y1="107" x2="159" y2="111"/>
+            </g>
+            <rect class="trim-guide-preview" x="9" y="9" width="150" height="95"
+                  fill="none" stroke="#00AEEF" stroke-width="0.2" stroke-dasharray="1.5,1.2"/>
+            <text id="slugLeft" x="12" y="110.5" font-family="'Bahnschrift', Arial, sans-serif" font-size="2.2" fill="#555555"></text>
+            <text id="slugRight" x="156" y="110.5" text-anchor="end" font-family="'Bahnschrift', Arial, sans-serif" font-size="2.2" fill="#555555"></text>
+          </svg>
+
+          <div class="bleed-box">
+            <div class="trim-box">
+              <section class="front-panel">
+                <div class="logo-artwork-wrap" id="logoSlot"></div>
+                <div class="front-variety-block">
+                  <div class="front-variety-name" id="out_front_nazev"></div>
+                  <div class="front-classification" id="out_front_zatrid"></div>
+                  <div class="front-vintage">
+                    <span class="vintage-rule"></span>
+                    <span id="out_front_rocnik"></span>
+                    <span class="vintage-rule"></span>
+                  </div>
+                </div>
+              </section>
+
+              <div class="vertical-divider"></div>
+
+              <section class="back-panel">
+                <div>
+                  <div class="back-header-variety" id="out_back_nazev"></div>
+                  <div class="back-header-vintage">ROČNÍK <span id="out_back_rocnik"></span></div>
+                  <svg class="back-wave-accent" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 2">
+                    <path d="M 0.2,1.2 C 6.5,0.1 14.5,0.3 23.5,1.5 C 15.5,1.0 7.5,1.1 0.2,1.7 Z" fill="#C89228"/>
+                  </svg>
+                  <div class="back-origin-block">
+                    <div id="out_back_zatrid"></div>
+                    <div>Obec Dolní Bojanovice</div>
+                    <div>Viniční trať <span id="out_trat"></span></div>
+                    <div>Víno z České republiky</div>
+                  </div>
+                </div>
+
+                <div class="gold-rule"></div>
+
+                <div class="back-producer-row">
+                  <div class="back-producer-text">
+                    <div><strong>Plněno v:</strong></div>
+                    <div>Vojtěch Salajka</div>
+                    <div>IČ: 01129813</div>
+                  </div>
+                  <div class="wine-glass-mark" id="glassSlot"></div>
+                </div>
+
+                <div class="gold-rule"></div>
+
+                <div>
+                  <div class="back-energy-block">
+                    <div>Energetická hodnota:</div>
+                    <div id="out_energie"></div>
+                  </div>
+                  <div class="back-qr-row">
+                    <div class="qr-container" id="qrSlot"></div>
+                    <div class="qr-caption">
+                      Složení<br/>a výživové údaje<br/>naleznete po<br/>načtení QR kódu.
+                    </div>
+                  </div>
+                  <div class="back-sulfites-lot">
+                    Obsahuje oxid siřičitý • č.š.: <span id="out_sarze"></span>
+                  </div>
+                </div>
+
+                <div class="gold-rule"></div>
+
+                <div class="back-footer-metrics">
+                  <span class="metric-volume" id="out_objem"></span>
+                  <span class="metric-alcohol">alk.: <span class="alc-num" id="out_alc_num"></span> <span id="out_alc_unit"></span></span>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="scripts/qr_svg.js"></script>
+  <script>
+    const DEFAULT_ROWS = [
+      {
+        kod: '01_RB_2026', odrudy_nazev: 'Rulandské bílé',
+        zatrid_cukr: 'Moravské zemské víno • polosuché', zatrid_kratke: 'Moravské zemské víno',
+        rocnik: '2026', vinicni_trat: 'Staré hory', cislo_sarze: '2611',
+        energeticka_hodnota: '328 kJ / 78 kcal ve 100ml', alkohol: '12,5 % obj.', objem: '0,75 l',
+        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rb-2611'
+      },
+      {
+        kod: '02_RV_2026', odrudy_nazev: 'Ryzlink vlašský',
+        zatrid_cukr: 'Moravské zemské víno • suché', zatrid_kratke: 'Moravské zemské víno',
+        rocnik: '2026', vinicni_trat: 'Pod předníma', cislo_sarze: '2614',
+        energeticka_hodnota: '305 kJ / 73 kcal ve 100ml', alkohol: '12,0 % obj.', objem: '0,75 l',
+        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2026/rv-2614'
+      },
+      {
+        kod: '03_CM_2025', odrudy_nazev: 'Cabernet Moravia',
+        zatrid_cukr: 'Moravské zemské víno • suché', zatrid_kratke: 'Moravské zemské víno',
+        rocnik: '2025', vinicni_trat: 'Stará hora', cislo_sarze: '2508',
+        energeticka_hodnota: '330 kJ / 79 kcal ve 100ml', alkohol: '13,5 % obj.', objem: '0,75 l',
+        url_e_etiketa: 'https://etikety.vinarstvisalajka.cz/2025/cm-2508'
+      }
+    ];
+
+    let rows = [...DEFAULT_ROWS];
+    let currentCode = rows[0].kod;
+
+    const $ = (id) => document.getElementById(id);
+
+    async function loadSvgs() {
+      try {
+        const [logoRes, glassRes] = await Promise.all([
+          fetch('assets/logo_salajka_layers.svg'),
+          fetch('assets/znak_vina_cr.svg')
+        ]);
+        if (logoRes.ok) $('logoSlot').innerHTML = (await logoRes.text()).replace(/<\?xml[^>]*\?>\s*/, '');
+        if (glassRes.ok) $('glassSlot').innerHTML = (await glassRes.text()).replace(/<\?xml[^>]*\?>\s*/, '');
+      } catch (e) {
+        $('logoSlot').innerHTML = '<div style="padding:20mm 5mm;text-align:center;color:#991B1B;font-size:9pt;">Pro zobrazení SVG grafiky otevřete stránku přes GitHub Pages nebo spusťte Generovat_etikety.bat</div>';
+      }
+    }
+
+    function populateSelect() {
+      const sel = $('varietySelect');
+      sel.innerHTML = '';
+      rows.forEach((r, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${r.kod} — ${r.odrudy_nazev} (${r.rocnik})`;
+        sel.appendChild(opt);
+      });
+    }
+
+    function loadRowIntoForm(row) {
+      currentCode = row.kod || 'ETIKETA';
+      $('f_nazev').value = row.odrudy_nazev || '';
+      $('f_zatrid_cukr').value = row.zatrid_cukr || '';
+      $('f_zatrid_kratke').value = row.zatrid_kratke || '';
+      $('f_rocnik').value = row.rocnik || '';
+      $('f_trat').value = row.vinicni_trat || '';
+      $('f_sarze').value = row.cislo_sarze || '';
+      $('f_energie').value = row.energeticka_hodnota || '';
+      $('f_alkohol').value = row.alkohol || '';
+      $('f_objem').value = row.objem || '0,75 l';
+      $('f_url').value = row.url_e_etiketa || '';
+      renderPreview();
+    }
+
+    function renderPreview() {
+      const sheet = $('pressSheet');
+      const mode = $('renderMode').value;
+      const shadow = $('shadowMode').value;
+      sheet.setAttribute('data-mode', mode);
+      sheet.setAttribute('data-shadow', shadow);
+
+      const nazev = $('f_nazev').value;
+      const rocnik = $('f_rocnik').value;
+      const sarze = $('f_sarze').value;
+      const alk = $('f_alkohol').value.trim();
+      const m = alk.match(/^([0-9]+(?:[,\.][0-9]+)?\s*%)\s*(.*)$/);
+
+      $('out_front_nazev').textContent = nazev;
+      $('out_back_nazev').textContent = nazev;
+      $('out_front_zatrid').textContent = $('f_zatrid_cukr').value;
+      $('out_back_zatrid').textContent = $('f_zatrid_kratke').value;
+      $('out_front_rocnik').textContent = rocnik;
+      $('out_back_rocnik').textContent = rocnik;
+      $('out_trat').textContent = $('f_trat').value;
+      $('out_energie').textContent = $('f_energie').value;
+      $('out_sarze').textContent = sarze;
+      $('out_objem').textContent = $('f_objem').value;
+      $('out_alc_num').textContent = m ? m[1] : alk;
+      $('out_alc_unit').textContent = m ? m[2] : '';
+
+      const layerTxt = mode === 'spot' ? 'Spot_UV (100% M)' : (mode === 'preview' ? 'NAHLED' : 'CMYK');
+      $('slugLeft').textContent = `${currentCode} | ${nazev} (${rocnik}) | Trim: 150×95 mm | Bleed: 3 mm | ${layerTxt}`;
+      $('slugRight').textContent = `č.š.: ${sarze} | Vinařství Salajka`;
+
+      const url = $('f_url').value.trim();
+      if (url && window.SalajkaQR) {
+        try {
+          $('qrSlot').innerHTML = window.SalajkaQR.generateQrSvg(url, 2);
+        } catch (err) {
+          $('qrSlot').textContent = 'QR chyba';
+        }
+      }
+    }
+
+    function parseSemicolonCsv(text) {
+      const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) return [];
+      const headers = lines[0].split(';').map((h) => h.trim());
+      return lines.slice(1).map((line) => {
+        const cols = line.split(';');
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = (cols[i] || '').trim(); });
+        return obj;
+      });
+    }
+
+    $('varietySelect').addEventListener('change', (e) => loadRowIntoForm(rows[Number(e.target.value)]));
+    ['renderMode', 'shadowMode', 'f_nazev', 'f_zatrid_cukr', 'f_zatrid_kratke', 'f_rocnik', 'f_trat', 'f_sarze', 'f_energie', 'f_alkohol', 'f_objem', 'f_url']
+      .forEach((id) => $(id).addEventListener('input', renderPreview));
+
+    $('csvUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const parsed = parseSemicolonCsv(reader.result);
+        if (parsed.length) {
+          rows = parsed;
+          populateSelect();
+          loadRowIntoForm(rows[0]);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    });
+
+    (async () => {
+      await loadSvgs();
+      try {
+        const res = await fetch('data/odrudy.csv');
+        if (res.ok) {
+          const parsed = parseSemicolonCsv(await res.text());
+          if (parsed.length) rows = parsed;
+        }
+      } catch (e) {}
+      populateSelect();
+      loadRowIntoForm(rows[0]);
+    })();
+  </script>
+</body>
+</html>

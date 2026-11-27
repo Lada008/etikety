@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30" width="9.5mm" height="11.8mm">
+  <!-- Vektorový národní znak Víno z České republiky (stylizovaná sklenička v trikoloře) -->
+  <!-- Modrý horní klín (CMYK 100/70/0/20 -> #004793) -->
+  <path d="M 5.4,2.8 L 18.6,2.8 C 16.5,5.8 14.0,8.2 12.0,9.8 C 10.0,8.2 7.5,5.8 5.4,2.8 Z" fill="#004793"/>
+  <!-- Levý stříbrno-šedý obrys kalichu (CMYK 0/0/0/35 -> #A6A8AB) -->
+  <path d="M 3.6,2.2 C 2.0,8.4 1.6,15.4 3.4,20.8 C 4.8,24.8 7.6,27.2 10.4,28.2 C 7.6,25.6 5.6,21.4 5.0,16.2 C 4.5,11.6 4.8,6.4 5.6,2.2 Z" fill="#A6A8AB"/>
+  <!-- Pravá červená část kalichu (CMYK 0/95/90/0 -> #D7141A) -->
+  <path d="M 20.4,2.2 C 22.0,8.4 22.4,15.4 20.6,20.8 C 19.2,24.8 16.4,27.2 13.6,28.2 C 12.8,24.8 12.6,19.4 13.2,14.8 C 13.8,10.2 16.4,5.6 20.4,2.2 Z" fill="#D7141A"/>
+</svg>
