@@ -174,6 +174,31 @@
 
     .producer strong { color: var(--ink); }
 
+    .lang-bar {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .lang-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #E5E7EB;
+      border: 1px solid rgba(230, 193, 99, 0.35);
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: var(--gold);
+      color: #141B3E;
+      border-color: var(--gold);
+    }
+
     .empty-state {
       text-align: center;
       padding: 20px 8px;
@@ -185,7 +210,12 @@
 <body>
   <main class="card" id="app">
     <header class="header">
-      <div class="brand">Vinařství Salajka • Elektronická etiketa</div>
+      <div class="lang-bar" role="group" aria-label="Language">
+        <button type="button" class="lang-btn" data-lang="cs">CZ</button>
+        <button type="button" class="lang-btn" data-lang="en">EN</button>
+        <button type="button" class="lang-btn" data-lang="de">DE</button>
+      </div>
+      <div class="brand" id="t_brand">Vinařství Salajka • Elektronická etiketa</div>
       <h1 class="wine-name" id="v_nazev">Víno</h1>
       <div class="wine-sub" id="v_zatrid"></div>
     </header>
@@ -193,45 +223,45 @@
     <div class="body" id="content">
       <div class="meta-pills" id="v_pills"></div>
 
-      <h2>Složení</h2>
+      <h2 id="t_h_ingredients">Složení</h2>
       <p class="ingredients" id="v_slozeni"></p>
       <div class="allergen-box" id="v_alergeny"></div>
 
-      <h2>Výživové údaje (na 100 ml)</h2>
+      <h2 id="t_h_nutrition">Výživové údaje (na 100 ml)</h2>
       <table class="nutrition" aria-label="Výživové údaje na 100 ml">
         <thead>
           <tr>
-            <th>Výživová hodnota</th>
-            <th>ve 100 ml</th>
+            <th id="t_th_name">Výživová hodnota</th>
+            <th id="t_th_val">ve 100 ml</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Energetická hodnota</td>
+            <td id="t_energy">Energetická hodnota</td>
             <td id="v_energie"></td>
           </tr>
           <tr>
-            <td>Tuky</td>
+            <td id="t_fat">Tuky</td>
             <td id="v_tuky"></td>
           </tr>
           <tr class="sub">
-            <td>z toho nasycené mastné kyseliny</td>
+            <td id="t_sat">z toho nasycené mastné kyseliny</td>
             <td id="v_nasycene"></td>
           </tr>
           <tr>
-            <td>Sacharidy</td>
+            <td id="t_carbs">Sacharidy</td>
             <td id="v_sacharidy"></td>
           </tr>
           <tr class="sub">
-            <td>z toho cukry</td>
+            <td id="t_sugars">z toho cukry</td>
             <td id="v_cukry"></td>
           </tr>
           <tr>
-            <td>Bílkoviny</td>
+            <td id="t_protein">Bílkoviny</td>
             <td id="v_bilkoviny"></td>
           </tr>
           <tr>
-            <td>Sůl</td>
+            <td id="t_salt">Sůl</td>
             <td id="v_sul"></td>
           </tr>
         </tbody>
@@ -240,16 +270,91 @@
       <p class="note" id="v_note"></p>
 
       <footer class="producer">
-        <div><strong>Plněno v:</strong> Vojtěch Salajka</div>
-        <div>Obec Dolní Bojanovice • IČ: 01129813</div>
+        <div><strong id="t_bottled">Plněno v:</strong> Vojtěch Salajka</div>
+        <div id="t_village">Obec Dolní Bojanovice • IČ: 01129813</div>
         <div id="v_trat_row"></div>
-        <div>Víno z České republiky</div>
+        <div id="t_origin">Víno z České republiky</div>
       </footer>
     </div>
   </main>
 
   <script>
     (function () {
+      const I18N = {
+        cs: {
+          brand: 'Vinařství Salajka • Elektronická etiketa',
+          vintage: 'Ročník',
+          lot: 'č.š.:',
+          alc: 'Alk.:',
+          h_ingredients: 'Složení',
+          h_nutrition: 'Výživové údaje (na 100 ml)',
+          th_name: 'Výživová hodnota',
+          th_val: 've 100 ml',
+          energy: 'Energetická hodnota',
+          fat: 'Tuky',
+          sat: 'z toho nasycené mastné kyseliny',
+          carbs: 'Sacharidy',
+          sugars: 'z toho cukry',
+          protein: 'Bílkoviny',
+          salt: 'Sůl',
+          note_negligible: 'Obsahuje zanedbatelné množství tuků, nasycených mastných kyselin, bílkovin a soli.',
+          bottled: 'Plněno v:',
+          village: 'Obec Dolní Bojanovice • IČ: 01129813',
+          vineyard: 'Viniční trať',
+          origin: 'Víno z České republiky',
+          def_ingredients: 'hrozny, konzervanty a antioxidanty (oxid siřičitý)',
+          def_allergens: 'Obsahuje oxid siřičitý'
+        },
+        en: {
+          brand: 'Vinařství Salajka • Electronic Label',
+          vintage: 'Vintage',
+          lot: 'Lot:',
+          alc: 'Alc.:',
+          h_ingredients: 'Ingredients',
+          h_nutrition: 'Nutrition Declaration (per 100 ml)',
+          th_name: 'Nutrition information',
+          th_val: 'per 100 ml',
+          energy: 'Energy',
+          fat: 'Fat',
+          sat: 'of which saturates',
+          carbs: 'Carbohydrate',
+          sugars: 'of which sugars',
+          protein: 'Protein',
+          salt: 'Salt',
+          note_negligible: 'Contains negligible amounts of fat, saturates, protein and salt.',
+          bottled: 'Bottled by:',
+          village: 'Dolní Bojanovice • ID: 01129813',
+          vineyard: 'Vineyard',
+          origin: 'Wine of the Czech Republic',
+          def_ingredients: 'grapes, preservatives and antioxidants (sulphur dioxide)',
+          def_allergens: 'Contains sulphites'
+        },
+        de: {
+          brand: 'Vinařství Salajka • Elektronisches Etikett',
+          vintage: 'Jahrgang',
+          lot: 'Los:',
+          alc: 'Alk.:',
+          h_ingredients: 'Zutaten',
+          h_nutrition: 'Nährwertdeklaration (je 100 ml)',
+          th_name: 'Nährwertangaben',
+          th_val: 'je 100 ml',
+          energy: 'Brennwert',
+          fat: 'Fett',
+          sat: 'davon gesättigte Fettsäuren',
+          carbs: 'Kohlenhydrate',
+          sugars: 'davon Zucker',
+          protein: 'Eiweiß',
+          salt: 'Salz',
+          note_negligible: 'Enthält geringfügige Mengen von Fett, gesättigten Fettsäuren, Eiweiß und Salz.',
+          bottled: 'Abgefüllt von:',
+          village: 'Dolní Bojanovice • ID: 01129813',
+          vineyard: 'Weinberg',
+          origin: 'Wein aus der Tschechischen Republik',
+          def_ingredients: 'Trauben, Konservierungsstoffe und Antioxidationsmittel (Schwefeldioxid)',
+          def_allergens: 'Enthält Sulfite'
+        }
+      };
+
       const p = new URLSearchParams(window.location.search);
       const get = (key, fallback = '') => (p.get(key) || fallback).trim();
 
@@ -261,8 +366,8 @@
       const energie = get('e', '—').replace(/\s*ve\s*100\s*ml/i, '');
       const alkohol = get('a');
       const objem = get('o');
-      const slozeni = get('sl', 'hrozny, konzervanty a antioxidanty (oxid siřičitý)');
-      const alergeny = get('al', 'Obsahuje oxid siřičitý');
+      const rawSlozeni = get('sl');
+      const rawAlergeny = get('al');
       const tuky = get('tu', '0 g');
       const nasycene = get('nm', '0 g');
       const sacharidy = get('sa', '—');
@@ -270,64 +375,97 @@
       const bilkoviny = get('bi', '0 g');
       const sul = get('su', '0 g');
 
-      document.title = `${nazev}${rocnik ? ' ' + rocnik : ''} — E-etiketa | Vinařství Salajka`;
-      document.getElementById('v_nazev').textContent = nazev;
-      document.getElementById('v_zatrid').textContent = [zatrid, rocnik ? `Ročník ${rocnik}` : ''].filter(Boolean).join(' • ');
-
-      const pills = [];
-      if (rocnik) pills.push(`Ročník ${rocnik}`);
-      if (sarze) pills.push(`č.š.: ${sarze}`);
-      if (alkohol) pills.push(`Alk.: ${alkohol}`);
-      if (objem) pills.push(objem);
-
-      const pillsEl = document.getElementById('v_pills');
-      pills.forEach((txt) => {
-        const span = document.createElement('span');
-        span.className = 'pill';
-        span.textContent = txt;
-        pillsEl.appendChild(span);
-      });
-
-      // Zvýraznění alergenů ve složení dle nařízení EU 1169/2011 (bezpečně bez raw HTML injection)
       const escapeHtml = (str) => str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       const highlightAllergens = (str) => escapeHtml(str).replace(
-        /(oxid\s+siřičitý|siřičitany|siřičitan[a-záčďéěíňóřšťúůýž]*|vaječ[a-záčďéěíňóřšťúůýž]*|mléč[a-záčďéěíňóřšťúůýž]*|kasein|lysozym|albumin)/gi,
+        /(oxid\s+siřičitý|siřičitany|siřičitan[a-záčďéěíňóřšťúůýž]*|sulphur\s+dioxide|sulphites|sulfites|schwefeldioxid|sulfite|vaječ[a-záčďéěíňóřšťúůýž]*|mléč[a-záčďéěíňóřšťúůýž]*|kasein|lysozym|albumin)/gi,
         '<strong>$1</strong>'
       );
-      document.getElementById('v_slozeni').innerHTML = highlightAllergens(slozeni);
-
-      const alEl = document.getElementById('v_alergeny');
-      if (alergeny) {
-        alEl.textContent = alergeny;
-      } else {
-        alEl.style.display = 'none';
-      }
-
-      document.getElementById('v_energie').textContent = energie;
-      document.getElementById('v_tuky').textContent = tuky;
-      document.getElementById('v_nasycene').textContent = nasycene;
-      document.getElementById('v_sacharidy').textContent = sacharidy;
-      document.getElementById('v_cukry').textContent = cukry;
-      document.getElementById('v_bilkoviny').textContent = bilkoviny;
-      document.getElementById('v_sul').textContent = sul;
 
       const isZero = (v) => /^0([,\.]0+)?\s*g$/i.test(v);
-      const noteEl = document.getElementById('v_note');
-      if (isZero(tuky) && isZero(nasycene) && isZero(bilkoviny) && isZero(sul)) {
-        noteEl.textContent = 'Obsahuje zanedbatelné množství tuků, nasycených mastných kyselin, bílkovin a soli.';
-      } else {
-        noteEl.style.display = 'none';
+
+      function renderLang(lang) {
+        const t = I18N[lang] || I18N.cs;
+        document.documentElement.lang = lang;
+        document.querySelectorAll('.lang-btn').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.lang === lang);
+        });
+
+        document.title = `${nazev}${rocnik ? ' ' + rocnik : ''} — E-etiketa | Vinařství Salajka`;
+        document.getElementById('t_brand').textContent = t.brand;
+        document.getElementById('v_nazev').textContent = nazev;
+        document.getElementById('v_zatrid').textContent = [zatrid, rocnik ? `${t.vintage} ${rocnik}` : ''].filter(Boolean).join(' • ');
+
+        const pillsEl = document.getElementById('v_pills');
+        pillsEl.innerHTML = '';
+        const pills = [];
+        if (rocnik) pills.push(`${t.vintage} ${rocnik}`);
+        if (sarze) pills.push(`${t.lot} ${sarze}`);
+        if (alkohol) pills.push(`${t.alc} ${alkohol}`);
+        if (objem) pills.push(objem);
+        pills.forEach((txt) => {
+          const span = document.createElement('span');
+          span.className = 'pill';
+          span.textContent = txt;
+          pillsEl.appendChild(span);
+        });
+
+        document.getElementById('t_h_ingredients').textContent = t.h_ingredients;
+        document.getElementById('t_h_nutrition').textContent = t.h_nutrition;
+        document.getElementById('t_th_name').textContent = t.th_name;
+        document.getElementById('t_th_val').textContent = t.th_val;
+        document.getElementById('t_energy').textContent = t.energy;
+        document.getElementById('t_fat').textContent = t.fat;
+        document.getElementById('t_sat').textContent = t.sat;
+        document.getElementById('t_carbs').textContent = t.carbs;
+        document.getElementById('t_sugars').textContent = t.sugars;
+        document.getElementById('t_protein').textContent = t.protein;
+        document.getElementById('t_salt').textContent = t.salt;
+        document.getElementById('t_bottled').textContent = t.bottled;
+        document.getElementById('t_village').textContent = t.village;
+        document.getElementById('t_origin').textContent = t.origin;
+
+        const slozeni = rawSlozeni || t.def_ingredients;
+        const alergeny = rawAlergeny || t.def_allergens;
+        document.getElementById('v_slozeni').innerHTML = highlightAllergens(slozeni);
+
+        const alEl = document.getElementById('v_alergeny');
+        alEl.textContent = alergeny;
+        alEl.style.display = alergeny ? '' : 'none';
+
+        document.getElementById('v_energie').textContent = energie;
+        document.getElementById('v_tuky').textContent = tuky;
+        document.getElementById('v_nasycene').textContent = nasycene;
+        document.getElementById('v_sacharidy').textContent = sacharidy;
+        document.getElementById('v_cukry').textContent = cukry;
+        document.getElementById('v_bilkoviny').textContent = bilkoviny;
+        document.getElementById('v_sul').textContent = sul;
+
+        const noteEl = document.getElementById('v_note');
+        if (isZero(tuky) && isZero(nasycene) && isZero(bilkoviny) && isZero(sul)) {
+          noteEl.textContent = t.note_negligible;
+          noteEl.style.display = '';
+        } else {
+          noteEl.style.display = 'none';
+        }
+
+        const tratRow = document.getElementById('v_trat_row');
+        if (trat) {
+          tratRow.textContent = `${t.vineyard} ${trat}`;
+          tratRow.style.display = '';
+        } else {
+          tratRow.style.display = 'none';
+        }
       }
 
-      const tratRow = document.getElementById('v_trat_row');
-      if (trat) {
-        tratRow.textContent = `Viniční trať ${trat}`;
-      } else {
-        tratRow.style.display = 'none';
-      }
+      document.querySelectorAll('.lang-btn').forEach((btn) => {
+        btn.addEventListener('click', () => renderLang(btn.dataset.lang));
+      });
+
+      const navLang = (navigator.language || 'cs').slice(0, 2).toLowerCase();
+      renderLang(I18N[navLang] ? navLang : 'cs');
     })();
   </script>
 </body>

@@ -433,6 +433,8 @@
     .press-sheet[data-mode="preview"] .trim-guide-preview { display: inline !important; }
     .trim-guide-preview { display: none; }
 
+    #batchPrintContainer { display: none; }
+
     /* Režim tisku do PDF */
     @media print {
       body { background: #FFFFFF; }
@@ -440,6 +442,16 @@
       .app-shell { display: block; }
       .preview-stage { padding: 0; margin: 0; display: block; }
       .sheet-frame { box-shadow: none; }
+      body.batch-printing .app-shell { display: none !important; }
+      body.batch-printing #batchPrintContainer { display: block !important; }
+      body.batch-printing #batchPrintContainer .press-sheet {
+        page-break-after: always;
+        break-after: page;
+      }
+      body.batch-printing #batchPrintContainer .press-sheet:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
     }
   </style>
 </head>
@@ -450,15 +462,16 @@
       <p class="sub">Tisková šablona 150×95 mm + 3 mm spadávka + vektorový QR kód</p>
 
       <div class="btn-row">
-        <button class="primary" onclick="window.print()">🖨️ Uložit / Tisk PDF</button>
+        <button type="button" class="primary" id="btnPrintSingle" title="Vytvoří čisté tiskové PDF (bez náhledových linek) pojmenované podle vína">🖨️ Tisk PDF</button>
+        <button type="button" id="btnPrintAll" title="Vygeneruje vícestránkové tiskové PDF se všemi uloženými víny najednou">📚 Tisk všech</button>
         <label class="file-btn">
-          📂 Načíst CSV
+          📂 CSV
           <input type="file" id="csvUpload" accept=".csv,text/csv" style="display:none" />
         </label>
-        <button type="button" id="btnExportCsv" title="Stáhnout všechny uložené šablony vín jako CSV">📥 Export CSV</button>
+        <button type="button" id="btnExportCsv" title="Stáhnout všechny uložené šablony vín jako CSV">📥 CSV</button>
       </div>
 
-      <div class="section-title" style="margin-top:6px;">Šablony vín (uloženo v prohlížeči)</div>
+      <div class="section-title" style="margin-top:6px;">Šablony vín (sdíleno v cloudu)</div>
 
       <div class="field">
         <label for="varietySelect">Vybrat uložené víno</label>
@@ -542,14 +555,21 @@
       <div class="field">
         <label for="f_energie">Energetická hodnota</label>
         <input id="f_energie" type="text" />
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;font-size:11.5px;color:#4B5563;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:5px;font-size:11.5px;color:#4B5563;flex-wrap:wrap;">
           <label style="display:inline-flex;align-items:center;gap:5px;margin:0;font-weight:500;cursor:pointer;">
             <input type="checkbox" id="autoEnergy" checked style="width:auto;margin:0;" />
             ⚡ Auto-přepočet (EU 1169/2011)
           </label>
+          <span id="sugarClassHint" style="color:#92400E;font-weight:600;"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:11.5px;color:#4B5563;">
+          <label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-weight:500;white-space:nowrap;">
+            Rozbor — Cukr (g/l):
+            <input id="f_cukr_gl" type="text" placeholder="např. 9,0" style="width:56px;padding:2px 5px;font-size:11.5px;" title="Zbytkový cukr z laboratorního rozboru v g/l — automaticky převede na g/100 ml" />
+          </label>
           <label style="display:inline-flex;align-items:center;gap:4px;margin:0;font-weight:500;white-space:nowrap;">
             Kyseliny (g/l):
-            <input id="f_kyseliny" type="text" value="6,0" style="width:52px;padding:2px 5px;font-size:11.5px;" title="Titrační / organické kyseliny z rozboru v g/l (13 kJ / 3 kcal na 1 g)" />
+            <input id="f_kyseliny" type="text" value="6,0" style="width:48px;padding:2px 5px;font-size:11.5px;" title="Titrační / organické kyseliny z rozboru v g/l (13 kJ / 3 kcal na 1 g)" />
           </label>
         </div>
       </div>
@@ -723,6 +743,7 @@
       </div>
     </main>
   </div>
+  <div id="batchPrintContainer"></div>
 
   <script src="scripts/qr_svg.js"></script>
   <script>
@@ -932,7 +953,9 @@
       $('f_sul').value = row.sul;
       $('f_qr_rezim').value = row.qr_rezim;
       $('f_styl').value = row.styl_etikety;
+      $('f_cukr_gl').value = '';
       $('saveStatus').textContent = '';
+      updateSugarClassHint();
       renderPreview();
     }
 
@@ -1095,6 +1118,22 @@
       $('f_energie').value = `${kJ} kJ / ${kcal} kcal ve 100ml`;
     }
 
+    function updateSugarClassHint() {
+      const sugarGlRaw = $('f_cukr_gl').value.trim();
+      const sugarGl = sugarGlRaw ? parseNum(sugarGlRaw) : parseNum($('f_cukry').value) * 10;
+      const acidsGl = parseNum($('f_kyseliny').value);
+      const hintEl = $('sugarClassHint');
+      if (!sugarGlRaw && !parseNum($('f_cukry').value)) {
+        hintEl.textContent = '';
+        return;
+      }
+      let cls = 'sladké';
+      if (sugarGl <= 4 || (sugarGl <= 9 && (sugarGl - acidsGl) <= 2)) cls = 'suché';
+      else if (sugarGl <= 12 || (sugarGl <= 18 && (sugarGl - acidsGl) <= 10)) cls = 'polosuché';
+      else if (sugarGl < 45) cls = 'polosladké';
+      hintEl.textContent = `→ ${cls}`;
+    }
+
     const energyTriggerIds = new Set(['f_alkohol', 'f_sacharidy', 'f_cukry', 'f_tuky', 'f_bilkoviny', 'f_kyseliny']);
 
     const formFieldIds = [
@@ -1110,10 +1149,29 @@
         } else if (energyTriggerIds.has(id) && $('autoEnergy').checked) {
           recalcEnergy();
         }
+        if (id === 'f_cukry' || id === 'f_kyseliny') updateSugarClassHint();
         renderPreview();
         showStatus('Neuložené změny — klikněte na „Uložit změny“ nebo „Uložit jako nové“.', true, 0);
       });
     });
+
+    $('f_cukr_gl').addEventListener('input', () => {
+      const val = $('f_cukr_gl').value.trim();
+      if (val) {
+        const g100 = Math.round(parseNum(val)) / 10;
+        const formatted = g100.toFixed(1).replace('.', ',') + ' g';
+        $('f_cukry').value = formatted;
+        const curSach = parseNum($('f_sacharidy').value);
+        if (!$('f_sacharidy').value.trim() || curSach < g100) {
+          $('f_sacharidy').value = formatted;
+        }
+        if ($('autoEnergy').checked) recalcEnergy();
+      }
+      updateSugarClassHint();
+      renderPreview();
+      showStatus('Neuložené změny — klikněte na „Uložit změny“ nebo „Uložit jako nové“.', true, 0);
+    });
+
     $('autoEnergy').addEventListener('change', () => {
       if ($('autoEnergy').checked) {
         recalcEnergy();
@@ -1122,6 +1180,118 @@
       }
     });
     ['renderMode', 'shadowMode'].forEach((id) => $(id).addEventListener('input', renderPreview));
+
+    function makeSafeFilename(str) {
+      return String(str || 'etiketa')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'etiketa';
+    }
+
+    function getQrPayloadForRow(d) {
+      if (d.qr_rezim === 'elabel') return buildElabelUrl(d);
+      if (d.qr_rezim === 'text') return buildQrPlainText(d);
+      return d.url_e_etiketa || '';
+    }
+
+    function populateSheetNode(sheetEl, d, printMode, shadowMode) {
+      sheetEl.setAttribute('data-mode', printMode);
+      sheetEl.setAttribute('data-shadow', shadowMode);
+      sheetEl.setAttribute('data-style', d.styl_etikety || 'klasik');
+      const m = d.alkohol.match(/^([0-9]+(?:[,\.][0-9]+)?\s*%)\s*(.*)$/);
+      const set = (sel, txt) => {
+        const el = sheetEl.querySelector(sel);
+        if (el) el.textContent = txt;
+      };
+      set('.front-variety-name', d.odrudy_nazev);
+      set('.back-header-variety', d.odrudy_nazev);
+      set('.front-classification', d.zatrid_cukr);
+      set('#out_back_zatrid', d.zatrid_kratke);
+      set('#out_front_rocnik', d.rocnik);
+      set('#out_back_rocnik', d.rocnik);
+      set('#out_trat', d.vinicni_trat);
+      set('#out_energie', d.energeticka_hodnota);
+      set('#out_obsahuje', d.obsahuje);
+      set('#out_sarze', d.cislo_sarze);
+      set('#out_objem', d.objem);
+      set('#out_alc_num', m ? m[1] : d.alkohol);
+      set('#out_alc_unit', m ? m[2] : '');
+
+      const layerTxt = printMode === 'spot' ? 'Spot_UV (100% M)' : 'CMYK';
+      set('#slugLeft', `${d.kod} | ${d.odrudy_nazev} (${d.rocnik}) | Trim: 150×95 mm | Bleed: 3 mm | ${layerTxt}`);
+      set('#slugRight', `č.š.: ${d.cislo_sarze} | Vinařství Salajka`);
+
+      const qrBox = sheetEl.querySelector('.qr-container');
+      const payload = getQrPayloadForRow(d);
+      if (qrBox && payload && window.SalajkaQR) {
+        try {
+          qrBox.innerHTML = window.SalajkaQR.generateQrSvg(payload, 2);
+        } catch (err) {
+          qrBox.textContent = 'QR chyba';
+        }
+      }
+    }
+
+    $('btnPrintSingle').addEventListener('click', () => {
+      const d = readFormData();
+      const warnings = [];
+      if (!d.odrudy_nazev) warnings.push('• Chybí název odrůdy');
+      if (!d.cislo_sarze) warnings.push('• Chybí číslo šarže (č.š.)');
+      if (!d.alkohol) warnings.push('• Chybí obsah alkoholu');
+      if ($('qrSlot').textContent === 'QR chyba') warnings.push('• QR kód obsahuje chybu');
+      if (warnings.length && !confirm(`Předtisková kontrola upozorňuje:\n\n${warnings.join('\n')}\n\nChcete přesto pokračovat do tisku PDF?`)) {
+        return;
+      }
+
+      const prevTitle = document.title;
+      const prevMode = $('renderMode').value;
+      const printMode = prevMode === 'spot' ? 'spot' : 'cmyk';
+      const suffix = printMode === 'spot' ? 'Spot_UV' : 'CMYK';
+
+      document.title = `${makeSafeFilename(d.kod)}_${makeSafeFilename(d.odrudy_nazev)}_${suffix}`;
+      $('pressSheet').setAttribute('data-mode', printMode);
+      $('slugLeft').textContent = `${d.kod} | ${d.odrudy_nazev} (${d.rocnik}) | Trim: 150×95 mm | Bleed: 3 mm | ${printMode === 'spot' ? 'Spot_UV (100% M)' : 'CMYK'}`;
+
+      const cleanup = () => {
+        document.title = prevTitle;
+        renderPreview();
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+    });
+
+    $('btnPrintAll').addEventListener('click', () => {
+      if (!rows.length) return;
+      const prevTitle = document.title;
+      const prevMode = $('renderMode').value;
+      const printMode = prevMode === 'spot' ? 'spot' : 'cmyk';
+      const shadowMode = $('shadowMode').value;
+      const suffix = printMode === 'spot' ? 'Spot_UV' : 'CMYK';
+
+      const container = $('batchPrintContainer');
+      container.innerHTML = '';
+      const templateSheet = $('pressSheet');
+
+      rows.forEach((row) => {
+        const clone = templateSheet.cloneNode(true);
+        clone.removeAttribute('id');
+        populateSheetNode(clone, row, printMode, shadowMode);
+        container.appendChild(clone);
+      });
+
+      document.title = `Vinarstvi_Salajka_vsechny_etikety_${rows.length}ks_${suffix}`;
+      document.body.classList.add('batch-printing');
+
+      const cleanup = () => {
+        document.body.classList.remove('batch-printing');
+        container.innerHTML = '';
+        document.title = prevTitle;
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+    });
 
     async function syncFromCloud() {
       if (!CLOUD_SYNC_URL) return null;
